@@ -7,6 +7,7 @@ import {
   getDocs,
 } from "firebase/firestore";
 import { db } from "./config";
+import { initializeApp } from "firebase/app";
 
 // Tạo hồ sơ user mới trong collection "users"
 export const createUserProfile = async (uid, data) => {
@@ -14,6 +15,10 @@ export const createUserProfile = async (uid, data) => {
   await setDoc(userRef, {
     ...data,
     level: "beginner",
+    role: "user",
+    onboardingCompleted: false,
+    initialLevel: null,
+    learningGoal: null,
     createdAt: new Date().toISOString(),
   });
 };
@@ -65,4 +70,17 @@ export const addFlashcardDeck = async (deckData) => {
 // Thêm 1 quiz mới (dùng cho Admin)
 export const addQuiz = async (quizData) => {
   await addDoc(collection(db, "quizzes"), quizData);
+};
+
+export const completeOnboarding = async (uid, initialLevel, learningGoal) => {
+  const userRef = doc(db, "users", uid);
+  await setDoc(
+    userRef,
+    {
+      onboardingCompleted: true,
+      initialLevel,
+      learningGoal,
+    },
+    { merge: true }, // Chỉ cập nhật các field này, giữ nguyên field khác
+  );
 };

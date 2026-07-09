@@ -10,6 +10,8 @@ import Quiz from "./pages/Quiz";
 import Katakana from "./pages/Katakana";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminRoute from "./components/AdminRoute";
+import Onboarding from "./pages/Onboarding";
+import OnboardingGate from "./components/OnboardingGate";
 
 function App() {
   return (
@@ -25,7 +27,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/hiragana"
           element={
@@ -50,7 +51,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/quiz"
           element={
@@ -59,13 +59,31 @@ function App() {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/admin"
           element={
             <AdminRoute>
               <AdminDashboard />
             </AdminRoute>
+          }
+        />
+        <Route
+          path="/onboarding"
+          element={
+            <ProtectedRoute>
+              <Onboarding />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <OnboardingGate>
+                <Home />
+              </OnboardingGate>
+            </ProtectedRoute>
           }
         />
       </Routes>
