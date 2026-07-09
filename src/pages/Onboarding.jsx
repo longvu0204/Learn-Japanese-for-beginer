@@ -26,13 +26,14 @@ function Onboarding() {
   const [selectedLevel, setSelectedLevel] = useState(null);
   const [selectedGoal, setSelectedGoal] = useState(null);
   const [saving, setSaving] = useState(false);
-  const { currentUser } = useAuth();
+  const { currentUser, refreshProfile } = useAuth();
   const navigate = useNavigate();
 
   const handleFinish = async () => {
     setSaving(true);
     try {
       await completeOnboarding(currentUser.uid, selectedLevel, selectedGoal);
+      await refreshProfile();
       navigate("/");
       // Không cần setSaving(false) vì component sẽ unmount khi navigate
     } catch (err) {

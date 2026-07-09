@@ -4,7 +4,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Home from "./pages/Home";
-import Hiragana from "./pages/Hinagara";
+import Hiragana from "./pages/Hinagana";
 import Flashcard from "./pages/Flashcard";
 import Quiz from "./pages/Quiz";
 import Katakana from "./pages/Katakana";
@@ -19,11 +19,14 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+
         <Route
           path="/"
           element={
             <ProtectedRoute>
-              <Home />
+              <OnboardingGate>
+                <Home />
+              </OnboardingGate>
             </ProtectedRoute>
           }
         />
@@ -31,7 +34,9 @@ function App() {
           path="/hiragana"
           element={
             <ProtectedRoute>
-              <Hiragana />
+              <OnboardingGate>
+                <Hiragana />
+              </OnboardingGate>
             </ProtectedRoute>
           }
         />
@@ -39,7 +44,9 @@ function App() {
           path="/katakana"
           element={
             <ProtectedRoute>
-              <Katakana />
+              <OnboardingGate>
+                <Katakana />
+              </OnboardingGate>
             </ProtectedRoute>
           }
         />
@@ -47,7 +54,9 @@ function App() {
           path="/flashcard"
           element={
             <ProtectedRoute>
-              <Flashcard />
+              <OnboardingGate>
+                <Flashcard />
+              </OnboardingGate>
             </ProtectedRoute>
           }
         />
@@ -55,10 +64,14 @@ function App() {
           path="/quiz"
           element={
             <ProtectedRoute>
-              <Quiz />
+              <OnboardingGate>
+                <Quiz />
+              </OnboardingGate>
             </ProtectedRoute>
           }
         />
+
+        {/* /admin và /onboarding KHÔNG bọc OnboardingGate, tránh vòng lặp redirect */}
         <Route
           path="/admin"
           element={
@@ -72,17 +85,6 @@ function App() {
           element={
             <ProtectedRoute>
               <Onboarding />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <OnboardingGate>
-                <Home />
-              </OnboardingGate>
             </ProtectedRoute>
           }
         />
