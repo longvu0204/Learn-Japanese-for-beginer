@@ -8,6 +8,7 @@ function Register() {
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const { refreshProfile } = useAuth();
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -18,6 +19,7 @@ function Register() {
         email: userCredential.user.email,
         displayName: displayName,
       });
+      await refreshProfile();
       navigate("/");
     } catch (err) {
       setError(err.message);

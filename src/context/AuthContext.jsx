@@ -34,10 +34,19 @@ export function AuthProvider({ children }) {
     return unsubscribe;
   }, []);
 
+  // Hàm mới: chủ động fetch lại profile từ Firestore, cập nhật vào Context
+  const refreshProfile = async () => {
+    if (currentUser) {
+      const profile = await getUserProfile(currentUser.uid);
+      setUserProfile(profile);
+    }
+  };
+
   const value = {
     currentUser,
     userProfile,
     loading,
+    refreshProfile, // Export ra để component khác gọi được
   };
 
   return (
