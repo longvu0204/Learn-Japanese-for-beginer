@@ -5,7 +5,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Home from "./pages/Home";
 import Hiragana from "./pages/Hinagara";
-import Flashcard from "./pages/FlashCard";
+import Flashcard from "./pages/Flashcard";
 import Quiz from "./pages/Quiz";
 import Katakana from "./pages/Katakana";
 import AdminDashboard from "./pages/AdminDashboard";
