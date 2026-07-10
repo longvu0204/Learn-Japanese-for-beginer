@@ -4,7 +4,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Home from "./pages/Home";
-import Hiragana from "./pages/Hinagana";
+import Hiragana from "./pages/Hiragana";
 import Flashcard from "./pages/Flashcard";
 import Quiz from "./pages/Quiz";
 import Katakana from "./pages/Katakana";
