@@ -12,6 +12,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminRoute from "./components/AdminRoute";
 import Onboarding from "./pages/Onboarding";
 import OnboardingGate from "./components/OnboardingGate";
+import Kanji from "./pages/Kanji";
 
 function App() {
   return (
@@ -66,6 +67,16 @@ function App() {
             <ProtectedRoute>
               <OnboardingGate>
                 <Quiz />
+              </OnboardingGate>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/kanji"
+          element={
+            <ProtectedRoute>
+              <OnboardingGate>
+                <Kanji />
               </OnboardingGate>
             </ProtectedRoute>
           }

@@ -1,0 +1,67 @@
+export const kanjiData = [
+  {
+    id: "k1",
+    char: "水",
+    meaning: "Nước",
+    onyomi: ["スイ"],
+    kunyomi: ["みず"],
+    strokeCount: 4,
+    jlptLevel: "N5",
+    examples: [
+      { word: "水曜日", reading: "すいようび", meaning: "Thứ Tư" },
+      { word: "水道", reading: "すいどう", meaning: "Đường nước" },
+    ],
+  },
+  {
+    id: "k2",
+    char: "火",
+    meaning: "Lửa",
+    onyomi: ["カ"],
+    kunyomi: ["ひ"],
+    strokeCount: 4,
+    jlptLevel: "N5",
+    examples: [
+      { word: "火曜日", reading: "かようび", meaning: "Thứ Ba" },
+      { word: "花火", reading: "はなび", meaning: "Pháo hoa" },
+    ],
+  },
+  {
+    id: "k3",
+    char: "木",
+    meaning: "Cây, gỗ",
+    onyomi: ["モク", "ボク"],
+    kunyomi: ["き"],
+    strokeCount: 4,
+    jlptLevel: "N5",
+    examples: [
+      { word: "木曜日", reading: "もくようび", meaning: "Thứ Năm" },
+      { word: "木造", reading: "もくぞう", meaning: "Kết cấu gỗ" },
+    ],
+  },
+  {
+    id: "k4",
+    char: "山",
+    meaning: "Núi",
+    onyomi: ["サン"],
+    kunyomi: ["やま"],
+    strokeCount: 3,
+    jlptLevel: "N5",
+    examples: [
+      { word: "山道", reading: "やまみち", meaning: "Đường núi" },
+      { word: "富士山", reading: "ふじさん", meaning: "Núi Phú Sĩ" },
+    ],
+  },
+  {
+    id: "k5",
+    char: "川",
+    meaning: "Sông",
+    onyomi: ["セン"],
+    kunyomi: ["かわ"],
+    strokeCount: 3,
+    jlptLevel: "N5",
+    examples: [
+      { word: "川岸", reading: "かわぎし", meaning: "Bờ sông" },
+      { word: "河川", reading: "かせん", meaning: "Sông ngòi" },
+    ],
+  },
+];

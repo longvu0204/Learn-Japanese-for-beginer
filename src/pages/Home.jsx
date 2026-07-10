@@ -27,6 +27,7 @@ const MODULES = [
     desc: "Kiểm tra kiến thức N5",
     icon: "📝",
   },
+  { path: "/kanji", title: "Kanji", desc: "Học Hán tự N5", icon: "漢" },
 ];
 
 const GOAL_LABELS = {
