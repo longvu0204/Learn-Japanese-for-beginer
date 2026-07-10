@@ -131,3 +131,8 @@ export const getAllHiragana = async () => {
   const snapshot = await getDocs(collection(db, "hiragana"));
   return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 };
+
+export const getAllKatakana = async () => {
+  const snapshot = await getDocs(collection(db, "katakana"));
+  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+};
