@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import Navbar from "../components/Navbar";
+import Layout from "../components/Layout";
 import { getAllQuizzes, saveQuizResult } from "../firebase/firestore";
 import { useAuth } from "../context/AuthContext";
 
@@ -16,29 +16,21 @@ function Quiz() {
   const [isSaving, setIsSaving] = useState(false);
   const intervalRef = useRef(null);
 
-  // Effect 1: tải danh sách quiz khi component mount
   useEffect(() => {
     getAllQuizzes()
       .then((data) => {
         setQuizzes(data);
-        if (data.length > 0) {
-          setTimeLeft(data[0].timeLimit); // Set thời gian sau khi biết quiz là gì
-        }
+        if (data.length > 0) setTimeLeft(data[0].timeLimit);
         setLoading(false);
       })
-      .catch((err) => {
-        console.error("Lỗi tải quiz:", err);
-        setLoading(false);
-      });
+      .catch(() => setLoading(false));
   }, []);
 
   const quiz = quizzes[0];
   const currentQuestion = quiz?.questions[currentQIndex];
 
-  // Effect 2: timer - chỉ chạy khi đã có quiz (tránh chạy khi chưa load xong)
   useEffect(() => {
     if (isFinished || !quiz) return;
-
     intervalRef.current = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
@@ -49,11 +41,9 @@ function Quiz() {
         return prev - 1;
       });
     }, 1000);
-
     return () => clearInterval(intervalRef.current);
   }, [isFinished, quiz]);
 
-  // Effect 3: lưu kết quả khi hoàn thành
   useEffect(() => {
     if (isFinished && currentUser && quiz) {
       setIsSaving(true);
@@ -66,21 +56,16 @@ function Quiz() {
         timeSpent,
       )
         .then(() => setIsSaving(false))
-        .catch((err) => {
-          console.error("Lỗi lưu kết quả:", err);
-          setIsSaving(false);
-        });
+        .catch(() => setIsSaving(false));
     }
   }, [isFinished]);
 
   const handleSelectAnswer = (option) => {
     if (selectedAnswer) return;
     setSelectedAnswer(option);
-
     if (option === currentQuestion.correctAnswer) {
       setScore((prev) => prev + 1);
     }
-
     setTimeout(() => {
       if (currentQIndex + 1 < quiz.questions.length) {
         setCurrentQIndex((prev) => prev + 1);
@@ -93,77 +78,88 @@ function Quiz() {
   };
 
   const getOptionStyle = (option) => {
-    if (!selectedAnswer) return "bg-slate-800 hover:bg-slate-700";
-    if (option === currentQuestion.correctAnswer) return "bg-green-600";
-    if (option === selectedAnswer) return "bg-red-600";
-    return "bg-slate-800 opacity-50";
+    if (!selectedAnswer)
+      return "bg-white border-2 border-black hover:bg-stone-100";
+    if (option === currentQuestion.correctAnswer)
+      return "bg-green-700 border-2 border-black text-white";
+    if (option === selectedAnswer)
+      return "bg-red-600 border-2 border-black text-white";
+    return "bg-stone-200 border-2 border-black opacity-50";
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-900">
-        <Navbar />
-        <p className="text-white p-8">Đang tải dữ liệu...</p>
-      </div>
+      <Layout>
+        <p className="text-stone-600">Đang tải dữ liệu...</p>
+      </Layout>
     );
   }
 
   if (!quiz) {
     return (
-      <div className="min-h-screen bg-slate-900">
-        <Navbar />
-        <p className="text-white p-8">Chưa có quiz nào.</p>
-      </div>
+      <Layout>
+        <p className="text-stone-600">Chưa có quiz nào.</p>
+      </Layout>
     );
   }
 
   if (isFinished) {
     return (
-      <div className="min-h-screen bg-slate-900">
-        <Navbar />
-        <div className="flex flex-col items-center justify-center gap-4 p-8">
-          <h1 className="text-3xl font-bold text-white">Kết quả</h1>
-          <p className="text-xl text-slate-300">
-            Điểm: {score} / {quiz.questions.length}
+      <Layout>
+        <div className="max-w-lg mx-auto bg-[#f5e6a8] border-2 border-black rounded-xl p-8 flex flex-col items-center gap-3 mt-12">
+          <h1 className="text-2xl font-bold text-stone-800">Kết quả</h1>
+          <p className="text-3xl font-bold text-stone-900">
+            {score} / {quiz.questions.length}
           </p>
           {isSaving ? (
-            <p className="text-slate-500 text-sm">Đang lưu kết quả...</p>
+            <p className="text-stone-500 text-sm">Đang lưu kết quả...</p>
           ) : (
-            <p className="text-green-400 text-sm">Đã lưu kết quả!</p>
+            <p className="text-green-700 text-sm font-medium">
+              ✓ Đã lưu kết quả!
+            </p>
           )}
         </div>
-      </div>
+      </Layout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-900">
-      <Navbar />
-      <div className="flex flex-col items-center gap-6 p-8">
-        <div className="w-full max-w-md flex justify-between text-white">
-          <span>
+    <Layout>
+      <div className="max-w-lg mx-auto">
+        <div className="flex justify-between items-center mb-4">
+          <span className="inline-block bg-black text-white text-xs font-bold px-3 py-1 rounded-full">
             Câu {currentQIndex + 1} / {quiz.questions.length}
           </span>
-          <span className={timeLeft <= 10 ? "text-red-500 font-bold" : ""}>
+          <span
+            className={`text-sm font-bold px-3 py-1 rounded-full border-2 border-black ${
+              timeLeft <= 10
+                ? "bg-red-600 text-white"
+                : "bg-white text-stone-800"
+            }`}
+          >
             ⏱ {timeLeft}s
           </span>
         </div>
-        <h2 className="text-2xl text-white font-bold">
-          {currentQuestion.question}
-        </h2>
-        <div className="w-full max-w-md flex flex-col gap-3">
+
+        <div className="bg-[#f5e6a8] border-2 border-black rounded-xl p-8 mb-4 text-center">
+          <h2 className="text-xl font-bold text-stone-900">
+            {currentQuestion.question}
+          </h2>
+        </div>
+
+        <div className="flex flex-col gap-3">
           {currentQuestion.options.map((option) => (
             <button
               key={option}
               onClick={() => handleSelectAnswer(option)}
-              className={`p-3 rounded-lg text-white transition-colors ${getOptionStyle(option)}`}
+              className={`p-3 rounded-lg font-medium text-stone-800 transition-colors ${getOptionStyle(option)}`}
             >
               {option}
             </button>
           ))}
         </div>
       </div>
-    </div>
+    </Layout>
   );
 }
 

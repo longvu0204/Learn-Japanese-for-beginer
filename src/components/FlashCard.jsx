@@ -5,7 +5,7 @@ function FlashCard({ card }) {
 
   return (
     <div
-      className="w-80 h-48 cursor-pointer"
+      className="w-full max-w-2xl h-72 cursor-pointer"
       style={{ perspective: "1000px" }}
       onClick={() => setIsFlipped(!isFlipped)}
     >
@@ -18,21 +18,26 @@ function FlashCard({ card }) {
       >
         {/* Mặt trước */}
         <div
-          className="absolute w-full h-full bg-red-600 rounded-xl flex items-center justify-center"
+          className="absolute w-full h-full bg-[#f5e6a8] border-2 border-black rounded-xl flex flex-col items-center justify-center gap-3"
           style={{ backfaceVisibility: "hidden" }}
         >
-          <span className="text-6xl text-white font-bold">{card.front}</span>
+          <span className="text-6xl font-bold text-stone-900">
+            {card.front}
+          </span>
+          <span className="text-xs text-stone-500 flex items-center gap-1">
+            ✨ Click để lật
+          </span>
         </div>
 
         {/* Mặt sau */}
         <div
-          className="absolute w-full h-full bg-green-600 rounded-xl flex items-center justify-center"
+          className="absolute w-full h-full bg-[#f5e6a8] border-2 border-black rounded-xl flex items-center justify-center px-8"
           style={{
             backfaceVisibility: "hidden",
             transform: "rotateY(180deg)",
           }}
         >
-          <span className="text-2xl text-white text-center px-4">
+          <span className="text-2xl text-stone-900 text-center">
             {card.back}
           </span>
         </div>
