@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-
+import { logout } from "../firebase/auth";
 const MENU_ITEMS = [
   { path: "/", label: "Trang chủ", icon: "🏠" },
   { path: "/hiragana", label: "Hiragana", icon: "あ" },
@@ -57,6 +57,13 @@ function Sidebar() {
         <p className="text-sm text-stone-500 truncate">
           {userProfile?.displayName || "Người dùng"}
         </p>
+        <button
+          onClick={logout}
+          className="flex items-center gap-3 px-3 py-2 mt-1 w-full rounded-lg text-sm font-medium text-red-700 hover:bg-red-50 hover:text-red-900 transition-colors border border-transparent hover:border-red-300 text-left"
+        >
+          <span className="w-5 text-center">🚪</span>
+          Đăng xuất
+        </button>
       </div>
     </aside>
   );
