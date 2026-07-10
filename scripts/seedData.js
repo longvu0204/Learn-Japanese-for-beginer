@@ -1,19 +1,16 @@
 import { initializeApp, cert } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
-import { createRequire } from "module";
-import { data } from "react-router-dom";
+import { readFileSync } from "fs";
 
-// Giúp import file JSON mượt mà trong ES Module
-const require = createRequire(import.meta.url);
-const admin = require("firebase-admin");
-const serviceAccount = require("./serviceAccountKey.json");
+// Đọc file JSON bằng cách thủ công (vì import JSON trực tiếp trong ES Module cần cấu hình thêm)
+const serviceAccount = JSON.parse(
+  readFileSync(new URL("./serviceAccountKey.json", import.meta.url)),
+);
 
-// Khởi tạo Firebase Admin
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
+initializeApp({
+  credential: cert(serviceAccount),
 });
 
-// Khởi tạo db để dùng ở các hàm bên dưới
 const db = getFirestore();
 
 const quizzes = [
