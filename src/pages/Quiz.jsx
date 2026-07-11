@@ -7,6 +7,7 @@ function Quiz() {
   const { currentUser } = useAuth();
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedQuizId, setSelectedQuizId] = useState(null); // null = chưa chọn quiz nào
 
   const [currentQIndex, setCurrentQIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
@@ -20,14 +21,23 @@ function Quiz() {
     getAllQuizzes()
       .then((data) => {
         setQuizzes(data);
-        if (data.length > 0) setTimeLeft(data[0].timeLimit);
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, []);
 
-  const quiz = quizzes[0];
+  const quiz = quizzes.find((q) => q.id === selectedQuizId);
   const currentQuestion = quiz?.questions[currentQIndex];
+
+  const startQuiz = (quizId) => {
+    const target = quizzes.find((q) => q.id === quizId);
+    setSelectedQuizId(quizId);
+    setTimeLeft(target.timeLimit);
+    setCurrentQIndex(0);
+    setScore(0);
+    setSelectedAnswer(null);
+    setIsFinished(false);
+  };
 
   useEffect(() => {
     if (isFinished || !quiz) return;
@@ -95,10 +105,31 @@ function Quiz() {
     );
   }
 
-  if (!quiz) {
+  // Màn hình chọn quiz - hiện khi chưa chọn quiz nào
+  if (!selectedQuizId) {
     return (
       <Layout>
-        <p className="text-stone-600">Chưa có quiz nào.</p>
+        <h1 className="text-2xl font-bold text-stone-800 mb-6">
+          Chọn bài trắc nghiệm
+        </h1>
+        {quizzes.length === 0 ? (
+          <p className="text-stone-600">Chưa có quiz nào.</p>
+        ) : (
+          <div className="grid grid-cols-2 gap-4">
+            {quizzes.map((q) => (
+              <button
+                key={q.id}
+                onClick={() => startQuiz(q.id)}
+                className="bg-[#f5e6a8] border-2 border-black rounded-xl p-5 text-left hover:bg-[#f0dd8a] transition-colors"
+              >
+                <p className="font-bold text-stone-900 mb-1">{q.title}</p>
+                <p className="text-sm text-stone-600">
+                  {q.questions.length} câu hỏi · {q.timeLimit}s
+                </p>
+              </button>
+            ))}
+          </div>
+        )}
       </Layout>
     );
   }
@@ -118,6 +149,12 @@ function Quiz() {
               ✓ Đã lưu kết quả!
             </p>
           )}
+          <button
+            onClick={() => setSelectedQuizId(null)}
+            className="mt-4 bg-black text-white px-4 py-2 rounded-lg font-bold"
+          >
+            ← Chọn bài khác
+          </button>
         </div>
       </Layout>
     );
