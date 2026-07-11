@@ -136,3 +136,28 @@ export const getAllKatakana = async () => {
   const snapshot = await getDocs(collection(db, "katakana"));
   return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 };
+
+// Thêm 1 chữ Hiragana/Katakana mới (dùng chung logic vì cấu trúc giống nhau)
+export const addKanaChar = async (type, charData) => {
+  const { id, ...data } = charData;
+  await setDoc(doc(db, type, id), data); // type = "hiragana" hoặc "katakana"
+};
+
+export const deleteKanaChar = async (type, id) => {
+  await deleteDoc(doc(db, type, id));
+};
+
+// Thêm 1 chữ Kanji mới
+export const addKanjiChar = async (kanjiData) => {
+  const { id, ...data } = kanjiData;
+  await setDoc(doc(db, "kanji", id), data);
+};
+
+export const deleteKanjiChar = async (id) => {
+  await deleteDoc(doc(db, "kanji", id));
+};
+
+export const getAllKanji = async () => {
+  const snapshot = await getDocs(collection(db, "kanji"));
+  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+};
