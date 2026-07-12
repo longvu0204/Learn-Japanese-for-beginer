@@ -13,6 +13,7 @@ import AdminRoute from "./components/AdminRoute";
 import Onboarding from "./pages/Onboarding";
 import OnboardingGate from "./components/OnboardingGate";
 import Kanji from "./pages/Kanji";
+import Grammar from "./pages/Grammar";
 
 function App() {
   return (
@@ -96,6 +97,17 @@ function App() {
           element={
             <ProtectedRoute>
               <Onboarding />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/grammar"
+          element={
+            <ProtectedRoute>
+              <OnboardingGate>
+                <Grammar />
+              </OnboardingGate>
             </ProtectedRoute>
           }
         />

@@ -161,3 +161,17 @@ export const getAllKanji = async () => {
   const snapshot = await getDocs(collection(db, "kanji"));
   return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 };
+
+export const getAllGrammar = async () => {
+  const snapshot = await getDocs(collection(db, "grammar"));
+  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+};
+
+export const addGrammarPoint = async (grammarData) => {
+  const { id, ...data } = grammarData;
+  await setDoc(doc(db, "grammar", id), data);
+};
+
+export const deleteGrammarPoint = async (id) => {
+  await deleteDoc(doc(db, "grammar", id));
+};

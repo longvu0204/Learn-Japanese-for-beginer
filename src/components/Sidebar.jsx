@@ -6,6 +6,7 @@ const MENU_ITEMS = [
   { path: "/hiragana", label: "Hiragana", icon: "あ" },
   { path: "/katakana", label: "Katakana", icon: "ア" },
   { path: "/kanji", label: "Kanji", icon: "漢" },
+  { path: "/grammar", label: "Ngữ pháp", icon: "文" },
   { path: "/flashcard", label: "Flashcard", icon: "🗂" },
   { path: "/quiz", label: "Trắc nghiệm", icon: "📝" },
 ];
