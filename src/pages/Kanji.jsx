@@ -7,6 +7,7 @@ import {
   markAsNotLearned,
 } from "../firebase/firestore";
 import { useAuth } from "../context/AuthContext";
+import StrokeOrderModal from "../components/StrokeOrderModal";
 
 function Kanji() {
   const { currentUser } = useAuth();
@@ -15,6 +16,7 @@ function Kanji() {
   const [loading, setLoading] = useState(true);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const audioRef = useRef(null);
+  const [showStroke, setShowStroke] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -142,6 +144,13 @@ function Kanji() {
             >
               🔊
             </button>
+            <button
+              onClick={() => setShowStroke(true)}
+              className="w-10 h-10 flex items-center justify-center bg-white border-2 border-black rounded-lg"
+              title="Xem cách viết"
+            >
+              ✍️
+            </button>
           </div>
 
           <p className="text-center text-xl font-bold text-stone-800 mb-6">
@@ -207,6 +216,13 @@ function Kanji() {
       </div>
 
       <audio ref={audioRef} />
+      {/* Cuối component, trước </Layout> */}
+      {showStroke && (
+        <StrokeOrderModal
+          char={current.char}
+          onClose={() => setShowStroke(false)}
+        />
+      )}
     </Layout>
   );
 }

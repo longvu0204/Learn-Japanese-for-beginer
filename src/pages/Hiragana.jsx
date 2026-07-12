@@ -7,6 +7,7 @@ import {
   markAsNotLearned,
 } from "../firebase/firestore";
 import { useAuth } from "../context/AuthContext";
+import StrokeOrderModal from "../components/StrokeOrderModal";
 
 // Cấu hình lại các hàng có 3 chữ cái: chèn ô trống "" để căn cột 1, 3, 5 trong Grid 5 cột
 const SEION_ROWS = [
@@ -53,6 +54,7 @@ function Hiragana() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const audioRef = useRef(null);
+  const [strokeChar, setStrokeChar] = useState(null);
 
   useEffect(() => {
     async function loadData() {
@@ -98,11 +100,16 @@ function Hiragana() {
   };
 
   // Render ô chữ cái đơn lẻ
-  const CharCell = ({ id }) => {
-    if (!id) return <div className="w-20 h-20" />; // Nếu là ô trống "", render khung rỗng để giữ vị trí chân thực
+  // const CharCell = ({ id }) => {
+  //   if (!id) return <div className="w-20 h-20" />; // Nếu là ô trống "", render khung rỗng để giữ vị trí chân thực
 
+  //   const item = charMap[id];
+  //   if (!item) return <div className="w-20 h-20" />;
+  //   const isLearned = learned.includes(item.id);
+
+  const CharCell = ({ id }) => {
     const item = charMap[id];
-    if (!item) return <div className="w-20 h-20" />;
+    if (!item) return null;
     const isLearned = learned.includes(item.id);
 
     return (
@@ -111,7 +118,7 @@ function Hiragana() {
           onClick={() => handleCharClick(item)}
           className={`
             w-20 h-20 rounded-xl border-2 border-black flex flex-col items-center justify-center
-            transition-colors mx-auto
+            transition-colors
             ${
               selected?.id === item.id
                 ? "bg-black text-white"
@@ -125,6 +132,15 @@ function Hiragana() {
           >
             {item.romaji}
           </span>
+        </button>
+
+        {/* Nút mới: mở hướng dẫn viết, góc dưới trái */}
+        <button
+          onClick={() => setStrokeChar(item.char)}
+          className="absolute -bottom-1.5 -left-1.5 w-5 h-5 rounded-full border-2 border-black bg-white flex items-center justify-center text-[10px]"
+          title="Xem cách viết"
+        >
+          ✍️
         </button>
 
         <button
@@ -222,6 +238,14 @@ function Hiragana() {
       </div>
 
       <audio ref={audioRef} />
+
+      {/* Thêm modal, chỉ hiện khi có chữ được chọn để xem cách viết */}
+      {strokeChar && (
+        <StrokeOrderModal
+          char={strokeChar}
+          onClose={() => setStrokeChar(null)}
+        />
+      )}
     </Layout>
   );
 }
