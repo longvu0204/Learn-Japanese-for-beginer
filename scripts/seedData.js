@@ -17,6 +17,7 @@ const quizzes = [
   {
     id: "n5-quiz-1",
     title: "N5 - Kiểm tra từ vựng cơ bản",
+    jlptLevel: "N5",
     timeLimit: 60,
     questions: [
       {
@@ -42,6 +43,26 @@ const quizzes = [
         question: "Số 5 trong tiếng Nhật đọc là?",
         options: ["よん", "ご", "さん", "はち"],
         correctAnswer: "ご",
+      },
+    ],
+  },
+  {
+    id: "n4-quiz-1",
+    title: "N4 - Kiểm tra ngữ pháp cơ bản",
+    jlptLevel: "N4",
+    timeLimit: 90,
+    questions: [
+      {
+        id: "q1",
+        question: "「働く」nghĩa là gì?",
+        options: ["Nghỉ ngơi", "Làm việc", "Đi chơi", "Ngủ"],
+        correctAnswer: "Làm việc",
+      },
+      {
+        id: "q2",
+        question: "「旅行」đọc là gì?",
+        options: ["りょこう", "りゅうこう", "りょうこ", "りこう"],
+        correctAnswer: "りょこう",
       },
     ],
   },
