@@ -8,6 +8,7 @@ function QuizManager() {
     { id: "q1", question: "", options: ["", "", "", ""], correctAnswer: "" },
   ]);
   const [message, setMessage] = useState("");
+  const [jlptLevel, setJlptLevel] = useState("N5");
 
   const updateQuestion = (index, field, value) => {
     const updated = [...questions];
@@ -42,7 +43,12 @@ function QuizManager() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await addQuiz({ title, timeLimit: Number(timeLimit), questions });
+      await addQuiz({
+        title,
+        jlptLevel,
+        timeLimit: Number(timeLimit),
+        questions,
+      });
       setMessage("Đã thêm quiz thành công!");
       setTitle("");
       setTimeLimit(60);
@@ -73,6 +79,20 @@ function QuizManager() {
             className="w-full p-2 rounded border-2 border-black mt-1"
             required
           />
+        </div>
+        <div>
+          <label className="text-stone-600 text-sm">Cấp độ</label>
+          <select
+            value={jlptLevel}
+            onChange={(e) => setJlptLevel(e.target.value)}
+            className="w-full p-2 rounded border-2 border-black mt-1 bg-white"
+          >
+            <option value="N5">N5</option>
+            <option value="N4">N4</option>
+            <option value="N3">N3</option>
+            <option value="N2">N2</option>
+            <option value="N1">N1</option>
+          </select>
         </div>
 
         <div>

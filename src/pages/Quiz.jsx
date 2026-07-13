@@ -3,11 +3,14 @@ import Layout from "../components/Layout";
 import { getAllQuizzes, saveQuizResult } from "../firebase/firestore";
 import { useAuth } from "../context/AuthContext";
 
+const LEVELS = ["N5", "N4", "N3", "N2", "N1"];
+
 function Quiz() {
   const { currentUser } = useAuth();
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedQuizId, setSelectedQuizId] = useState(null); // null = chưa chọn quiz nào
+  const [selectedLevel, setSelectedLevel] = useState("N5");
+  const [selectedQuizId, setSelectedQuizId] = useState(null);
 
   const [currentQIndex, setCurrentQIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
@@ -26,6 +29,7 @@ function Quiz() {
       .catch(() => setLoading(false));
   }, []);
 
+  const quizzesInLevel = quizzes.filter((q) => q.jlptLevel === selectedLevel);
   const quiz = quizzes.find((q) => q.id === selectedQuizId);
   const currentQuestion = quiz?.questions[currentQIndex];
 
@@ -109,14 +113,33 @@ function Quiz() {
   if (!selectedQuizId) {
     return (
       <Layout>
-        <h1 className="text-2xl font-bold text-stone-800 mb-6">
+        <h1 className="text-2xl font-bold text-stone-800 mb-4">
           Chọn bài trắc nghiệm
         </h1>
-        {quizzes.length === 0 ? (
-          <p className="text-stone-600">Chưa có quiz nào.</p>
+
+        <div className="flex gap-2 mb-6">
+          {LEVELS.map((level) => (
+            <button
+              key={level}
+              onClick={() => setSelectedLevel(level)}
+              className={`px-4 py-2 rounded-lg font-bold border-2 border-black transition-colors ${
+                selectedLevel === level
+                  ? "bg-black text-white"
+                  : "bg-[#f5e6a8] text-stone-800 hover:bg-[#f0dd8a]"
+              }`}
+            >
+              {level}
+            </button>
+          ))}
+        </div>
+
+        {quizzesInLevel.length === 0 ? (
+          <p className="text-stone-600">
+            Chưa có quiz nào cho cấp độ {selectedLevel}.
+          </p>
         ) : (
           <div className="grid grid-cols-2 gap-4">
-            {quizzes.map((q) => (
+            {quizzesInLevel.map((q) => (
               <button
                 key={q.id}
                 onClick={() => startQuiz(q.id)}
