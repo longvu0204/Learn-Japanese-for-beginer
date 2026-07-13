@@ -568,12 +568,52 @@ const flashcardDecks = [
   {
     id: "n5-basic-1",
     title: "N5 - Từ vựng cơ bản 1",
+    jlptLevel: "N5",
     cards: [
       { id: "c1", front: "水", back: "みず (mizu) - Nước" },
       { id: "c2", front: "火", back: "ひ (hi) - Lửa" },
       { id: "c3", front: "木", back: "き (ki) - Cây" },
       { id: "c4", front: "山", back: "やま (yama) - Núi" },
       { id: "c5", front: "川", back: "かわ (kawa) - Sông" },
+    ],
+  },
+  {
+    id: "n4-basic-1",
+    title: "N4 - Từ vựng cơ bản 1",
+    jlptLevel: "N4",
+    cards: [
+      { id: "c1", front: "働く", back: "はたらく - Làm việc" },
+      { id: "c2", front: "旅行", back: "りょこう - Du lịch" },
+      { id: "c3", front: "始める", back: "はじめる - Bắt đầu" },
+      { id: "c4", front: "終わる", back: "おわる - Kết thúc" },
+    ],
+  },
+  {
+    id: "n3-basic-1",
+    title: "N3 - Từ vựng cơ bản 1",
+    jlptLevel: "N3",
+    cards: [
+      { id: "c1", front: "経験", back: "けいけん - Kinh nghiệm" },
+      { id: "c2", front: "経済", back: "けいざい - Kinh tế" },
+      { id: "c3", front: "環境", back: "かんきょう - Môi trường" },
+    ],
+  },
+  {
+    id: "n2-basic-1",
+    title: "N2 - Từ vựng cơ bản 1",
+    jlptLevel: "N2",
+    cards: [
+      { id: "c1", front: "予算", back: "よさん - Ngân sách" },
+      { id: "c2", front: "計算", back: "けいさん - Tính toán" },
+    ],
+  },
+  {
+    id: "n1-basic-1",
+    title: "N1 - Từ vựng cơ bản 1",
+    jlptLevel: "N1",
+    cards: [
+      { id: "c1", front: "概念", back: "がいねん - Khái niệm" },
+      { id: "c2", front: "緊張", back: "きんちょう - Căng thẳng" },
     ],
   },
 ];

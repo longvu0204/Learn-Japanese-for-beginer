@@ -1,11 +1,3 @@
-// import {
-//   doc,
-//   setDoc,
-//   getDoc,
-//   collection,
-//   addDoc,
-//   getDocs,
-// } from "firebase/firestore";
 import { db } from "./config";
 import { initializeApp } from "firebase/app";
 import {
@@ -174,4 +166,12 @@ export const addGrammarPoint = async (grammarData) => {
 
 export const deleteGrammarPoint = async (id) => {
   await deleteDoc(doc(db, "grammar", id));
+};
+
+export const deleteFlashcardDeck = async (deckId) => {
+  await deleteDoc(doc(db, "flashcardDecks", deckId));
+};
+export const setFlashcardDeck = async (deckData) => {
+  const { id, ...data } = deckData;
+  await setDoc(doc(db, "flashcardDecks", id), data);
 };

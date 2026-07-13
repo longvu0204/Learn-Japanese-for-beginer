@@ -9,37 +9,43 @@ import {
 } from "../firebase/firestore";
 import { useAuth } from "../context/AuthContext";
 
+const LEVELS = ["N5", "N4", "N3", "N2", "N1"];
+
 function Flashcard() {
   const { currentUser } = useAuth();
-  const [decks, setDecks] = useState([]);
-  const [learned, setLearned] = useState([]);
+  const [allDecks, setAllDecks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedLevel, setSelectedLevel] = useState("N5");
+  const [selectedDeckId, setSelectedDeckId] = useState(null);
+  const [learned, setLearned] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const deck = decks[0];
+  const decksInLevel = allDecks.filter((d) => d.jlptLevel === selectedLevel);
+  const deck = allDecks.find((d) => d.id === selectedDeckId);
   const progressType = deck ? `flashcard_${deck.id}` : null;
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        const data = await getAllFlashcardDecks();
-        setDecks(data);
-
-        if (data.length > 0) {
-          const progress = await getProgress(
-            currentUser.uid,
-            `flashcard_${data[0].id}`,
-          );
-          setLearned(progress.learned);
-        }
-      } catch (err) {
-        console.error("Lỗi tải flashcard:", err);
-      } finally {
+    getAllFlashcardDecks()
+      .then((data) => {
+        setAllDecks(data);
         setLoading(false);
-      }
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const startDeck = async (deckId) => {
+    setSelectedDeckId(deckId);
+    setCurrentIndex(0);
+    try {
+      const progress = await getProgress(
+        currentUser.uid,
+        `flashcard_${deckId}`,
+      );
+      setLearned(progress.learned);
+    } catch (err) {
+      setLearned([]);
     }
-    loadData();
-  }, [currentUser]);
+  };
 
   if (loading) {
     return (
@@ -49,14 +55,58 @@ function Flashcard() {
     );
   }
 
-  if (decks.length === 0) {
+  // Màn hình 1: chưa chọn bộ - hiện tab cấp độ + danh sách bộ trong cấp độ đó
+  if (!selectedDeckId) {
     return (
       <Layout>
-        <p className="text-stone-600">Chưa có bộ flashcard nào.</p>
+        <div className="mb-4">
+          <span className="inline-block bg-black text-white text-xs font-bold px-3 py-1 rounded-full">
+            Flashcard
+          </span>
+        </div>
+
+        <div className="flex gap-2 mb-6">
+          {LEVELS.map((level) => (
+            <button
+              key={level}
+              onClick={() => setSelectedLevel(level)}
+              className={`px-4 py-2 rounded-lg font-bold border-2 border-black transition-colors ${
+                selectedLevel === level
+                  ? "bg-black text-white"
+                  : "bg-[#f5e6a8] text-stone-800 hover:bg-[#f0dd8a]"
+              }`}
+            >
+              {level}
+            </button>
+          ))}
+        </div>
+
+        {decksInLevel.length === 0 ? (
+          <p className="text-stone-600">
+            Chưa có bộ flashcard nào cho cấp độ {selectedLevel}. Vào Admin
+            Dashboard để thêm.
+          </p>
+        ) : (
+          <div className="grid grid-cols-2 gap-4">
+            {decksInLevel.map((d) => (
+              <button
+                key={d.id}
+                onClick={() => startDeck(d.id)}
+                className="bg-[#f5e6a8] border-2 border-black rounded-xl p-5 text-left hover:bg-[#f0dd8a] transition-colors"
+              >
+                <p className="font-bold text-stone-900 mb-1">{d.title}</p>
+                <p className="text-sm text-stone-600">
+                  {d.cards.length} từ vựng
+                </p>
+              </button>
+            ))}
+          </div>
+        )}
       </Layout>
     );
   }
 
+  // Màn hình 2: đang học 1 bộ cụ thể
   const currentCard = deck.cards[currentIndex];
   const isCurrentLearned = learned.includes(currentCard.id);
   const progressPercent = Math.round(
@@ -81,7 +131,7 @@ function Flashcard() {
       deck.cards.length,
     );
     setLearned((prev) => [...prev, currentCard.id]);
-    handleNext(); // Tự động chuyển thẻ tiếp theo sau khi đánh dấu
+    handleNext();
   };
 
   const markNotLearned = async () => {
@@ -94,10 +144,17 @@ function Flashcard() {
 
   return (
     <Layout>
+      <button
+        onClick={() => setSelectedDeckId(null)}
+        className="text-sm font-bold text-stone-600 mb-4 hover:underline"
+      >
+        ← Chọn bộ khác
+      </button>
+
       <div className="mb-2 flex items-center justify-between">
         <div>
           <span className="inline-block bg-black text-white text-xs font-bold px-3 py-1 rounded-full">
-            Bài 1
+            {deck.jlptLevel}
           </span>
           <span className="ml-2 text-sm text-stone-500">
             {deck.cards.length} từ vựng
@@ -133,21 +190,18 @@ function Flashcard() {
           >
             ← Trước
           </button>
-
           <button
             onClick={markNotLearned}
             className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white font-bold hover:bg-red-700"
           >
             ✕ Chưa thuộc
           </button>
-
           <button
             onClick={markLearned}
             className="flex-1 px-4 py-2 rounded-lg bg-green-700 text-white font-bold hover:bg-green-800"
           >
             ✓ Đã thuộc
           </button>
-
           <button
             onClick={handleNext}
             className="px-4 py-2 rounded-lg border-2 border-black bg-white text-stone-800 font-medium hover:bg-stone-100"

@@ -4,11 +4,13 @@ import Tabs from "../components/Tabs";
 import KanaManager from "../components/admin/KanaManager";
 import KanjiManager from "../components/admin/KanjiManager";
 import QuizManager from "../components/admin/QuizManager";
+import FlashcardManager from "../components/admin/FlashcardManager";
 
 const TABS = [
   { key: "hiragana", label: "Hiragana" },
   { key: "katakana", label: "Katakana" },
   { key: "kanji", label: "Kanji" },
+  { key: "flashcard", label: "Flashcard" },
   { key: "quiz", label: "Quiz" },
 ];
 
@@ -26,6 +28,7 @@ function AdminDashboard() {
       {activeTab === "hiragana" && <KanaManager type="hiragana" />}
       {activeTab === "katakana" && <KanaManager type="katakana" />}
       {activeTab === "kanji" && <KanjiManager />}
+      {activeTab === "flashcard" && <FlashcardManager />}
       {activeTab === "quiz" && <QuizManager />}
     </Layout>
   );
