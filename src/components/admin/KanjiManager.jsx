@@ -139,7 +139,7 @@ function KanjiManager() {
             required
           />
           <input
-            placeholder="Nghĩa (vd: Cây)"
+            placeholder="Hán Việt (vd: Cây)"
             value={form.meaning}
             onChange={(e) => setForm({ ...form, meaning: e.target.value })}
             className="p-2 rounded border-2 border-black"
