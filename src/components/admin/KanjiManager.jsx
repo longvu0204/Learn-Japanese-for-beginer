@@ -7,10 +7,24 @@ import {
 
 const LEVELS = ["N5", "N4", "N3", "N2", "N1"];
 
+// Tính ID tiếp theo dựa trên số lớn nhất đang có (vd: có k1..k9 -> trả về "k10")
+function computeNextId(items) {
+  let maxNum = 0;
+  items.forEach((item) => {
+    const match = item.id.match(/^k(\d+)$/);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (num > maxNum) maxNum = num;
+    }
+  });
+  return `k${maxNum + 1}`;
+}
+
 function KanjiManager() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterLevel, setFilterLevel] = useState("ALL");
+  const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState({
     id: "",
     char: "",
@@ -29,10 +43,15 @@ function KanjiManager() {
     const data = await getAllKanji();
     setItems(data);
     setLoading(false);
+    return data;
   };
 
   useEffect(() => {
-    loadItems();
+    async function init() {
+      const data = await loadItems();
+      setForm((prev) => ({ ...prev, id: computeNextId(data) }));
+    }
+    init();
   }, []);
 
   const updateExample = (index, field, value) => {
@@ -47,6 +66,20 @@ function KanjiManager() {
 
   const removeExample = (index) => {
     setExamples(examples.filter((_, i) => i !== index));
+  };
+
+  const resetForm = (newItems) => {
+    setForm({
+      id: computeNextId(newItems),
+      char: "",
+      meaning: "",
+      onyomi: "",
+      kunyomi: "",
+      strokeCount: "",
+      jlptLevel: form.jlptLevel,
+    });
+    setExamples([{ word: "", reading: "", meaning: "" }]);
+    setIsEditing(false);
   };
 
   const handleSubmit = async (e) => {
@@ -70,17 +103,8 @@ function KanjiManager() {
         examples: cleanedExamples,
       });
       setMessage(`Đã thêm/cập nhật "${form.char}" (${form.jlptLevel})`);
-      setForm({
-        id: "",
-        char: "",
-        meaning: "",
-        onyomi: "",
-        kunyomi: "",
-        strokeCount: "",
-        jlptLevel: form.jlptLevel,
-      });
-      setExamples([{ word: "", reading: "", meaning: "" }]);
-      loadItems();
+      const newItems = await loadItems();
+      resetForm(newItems);
     } catch (err) {
       setMessage("Lỗi: " + err.message);
     }
@@ -89,10 +113,14 @@ function KanjiManager() {
   const handleDelete = async (id) => {
     if (!confirm(`Xóa Kanji "${id}"?`)) return;
     await deleteKanjiChar(id);
-    loadItems();
+    const newItems = await loadItems();
+    if (form.id === id && isEditing) {
+      resetForm(newItems);
+    }
   };
 
   const handleEdit = (item) => {
+    setIsEditing(true);
     setForm({
       id: item.id,
       char: item.char,
@@ -110,11 +138,23 @@ function KanjiManager() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const displayedItems =
+  const handleCancelEdit = () => {
+    resetForm(items);
+  };
+
+  function sortByIdNumber(list) {
+    return [...list].sort((a, b) => {
+      const numA = parseInt(a.id.match(/\d+/)?.[0] || "0", 10);
+      const numB = parseInt(b.id.match(/\d+/)?.[0] || "0", 10);
+      return numA - numB;
+    });
+  }
+
+  const filteredItems =
     filterLevel === "ALL"
       ? items
       : items.filter((i) => i.jlptLevel === filterLevel);
-
+  const displayedItems = sortByIdNumber(filteredItems);
   return (
     <div>
       <h2 className="text-xl font-bold text-stone-800 mb-4">Quản lý Kanji</h2>
@@ -123,14 +163,22 @@ function KanjiManager() {
         onSubmit={handleSubmit}
         className="bg-[#f5e6a8] border-2 border-black rounded-xl p-5 mb-6 max-w-2xl"
       >
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm font-bold text-stone-700">
+            {isEditing ? `Đang sửa: ${form.id}` : `ID sẽ tạo: ${form.id}`}
+          </span>
+          {isEditing && (
+            <button
+              type="button"
+              onClick={handleCancelEdit}
+              className="text-sm text-stone-600 underline"
+            >
+              Hủy sửa, thêm mới
+            </button>
+          )}
+        </div>
+
         <div className="grid grid-cols-3 gap-3 mb-3">
-          <input
-            placeholder="ID (vd: k6)"
-            value={form.id}
-            onChange={(e) => setForm({ ...form, id: e.target.value })}
-            className="p-2 rounded border-2 border-black"
-            required
-          />
           <input
             placeholder="Chữ Kanji (vd: 木)"
             value={form.char}
@@ -139,12 +187,23 @@ function KanjiManager() {
             required
           />
           <input
-            placeholder="Hán Việt (vd: Cây)"
+            placeholder="Nghĩa (vd: Cây)"
             value={form.meaning}
             onChange={(e) => setForm({ ...form, meaning: e.target.value })}
             className="p-2 rounded border-2 border-black"
             required
           />
+          <select
+            value={form.jlptLevel}
+            onChange={(e) => setForm({ ...form, jlptLevel: e.target.value })}
+            className="p-2 rounded border-2 border-black bg-white"
+          >
+            {LEVELS.map((level) => (
+              <option key={level} value={level}>
+                {level}
+              </option>
+            ))}
+          </select>
           <input
             placeholder="Âm On, cách nhau bởi dấu phẩy"
             value={form.onyomi}
@@ -165,18 +224,6 @@ function KanjiManager() {
             className="p-2 rounded border-2 border-black"
             required
           />
-
-          <select
-            value={form.jlptLevel}
-            onChange={(e) => setForm({ ...form, jlptLevel: e.target.value })}
-            className="p-2 rounded border-2 border-black bg-white"
-          >
-            {LEVELS.map((level) => (
-              <option key={level} value={level}>
-                {level}
-              </option>
-            ))}
-          </select>
         </div>
 
         <h3 className="font-bold text-stone-800 mb-2">Từ ghép ví dụ</h3>
@@ -226,7 +273,7 @@ function KanjiManager() {
           type="submit"
           className="w-full bg-black text-white p-3 rounded-lg font-bold"
         >
-          Thêm / Cập nhật
+          {isEditing ? "Cập nhật" : "Thêm mới"}
         </button>
         {message && (
           <p className="text-green-700 text-sm mt-2 font-medium">{message}</p>

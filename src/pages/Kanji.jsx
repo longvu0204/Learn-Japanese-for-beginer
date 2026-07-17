@@ -20,7 +20,17 @@ function Kanji() {
   const audioRef = useRef(null);
 
   // Lọc danh sách theo cấp độ đang chọn
-  const kanjiList = allKanji.filter((k) => k.jlptLevel === selectedLevel);
+  function sortByIdNumber(list) {
+    return [...list].sort((a, b) => {
+      const numA = parseInt(a.id.match(/\d+/)?.[0] || "0", 10);
+      const numB = parseInt(b.id.match(/\d+/)?.[0] || "0", 10);
+      return numA - numB;
+    });
+  }
+
+  const kanjiList = sortByIdNumber(
+    allKanji.filter((k) => k.jlptLevel === selectedLevel),
+  );
   const progressType = `kanji_${selectedLevel}`; // Tách tiến độ riêng theo từng cấp độ
 
   useEffect(() => {
