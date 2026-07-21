@@ -9,6 +9,7 @@ const MENU_ITEMS = [
   { path: "/grammar", label: "Ngữ pháp", icon: "文" },
   { path: "/flashcard", label: "Flashcard", icon: "🗂" },
   { path: "/quiz", label: "Trắc nghiệm", icon: "📝" },
+  { path: "/listening", label: "Luyện nghe", icon: "🎧" },
 ];
 
 function Sidebar() {

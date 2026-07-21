@@ -6,6 +6,7 @@ import KanjiManager from "../components/admin/KanjiManager";
 import QuizManager from "../components/admin/QuizManager";
 import FlashcardManager from "../components/admin/FlashcardManager";
 import GrammarManager from "../components/admin/GrammarManager";
+import ListeningManager from "../components/admin/ListeningManager";
 
 const TABS = [
   { key: "hiragana", label: "Hiragana" },
@@ -14,6 +15,7 @@ const TABS = [
   { key: "grammar", label: "Ngữ pháp" },
   { key: "flashcard", label: "Flashcard" },
   { key: "quiz", label: "Quiz" },
+  { key: "listening", label: "Luyện nghe" },
 ];
 
 function AdminDashboard() {
@@ -33,6 +35,7 @@ function AdminDashboard() {
       {activeTab === "grammar" && <GrammarManager />}
       {activeTab === "flashcard" && <FlashcardManager />}
       {activeTab === "quiz" && <QuizManager />}
+      {activeTab === "listening" && <ListeningManager />}
     </Layout>
   );
 }

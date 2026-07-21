@@ -14,6 +14,7 @@ import Onboarding from "./pages/Onboarding";
 import OnboardingGate from "./components/OnboardingGate";
 import Kanji from "./pages/Kanji";
 import Grammar from "./pages/Grammar";
+import Listening from "./pages/Listening";
 
 function App() {
   return (
@@ -107,6 +108,16 @@ function App() {
             <ProtectedRoute>
               <OnboardingGate>
                 <Grammar />
+              </OnboardingGate>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/listening"
+          element={
+            <ProtectedRoute>
+              <OnboardingGate>
+                <Listening />
               </OnboardingGate>
             </ProtectedRoute>
           }

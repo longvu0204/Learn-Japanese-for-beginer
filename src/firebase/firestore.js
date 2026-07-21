@@ -176,3 +176,17 @@ export const setFlashcardDeck = async (deckData) => {
   const { id, ...data } = deckData;
   await setDoc(doc(db, "flashcardDecks", id), data);
 };
+
+export const getAllListening = async () => {
+  const snapshot = await getDocs(collection(db, "listening"));
+  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+};
+
+export const addListeningItem = async (itemData) => {
+  const { id, ...data } = itemData;
+  await setDoc(doc(db, "listening", id), data);
+};
+
+export const deleteListeningItem = async (id) => {
+  await deleteDoc(doc(db, "listening", id));
+};
