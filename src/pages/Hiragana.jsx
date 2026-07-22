@@ -100,16 +100,11 @@ function Hiragana() {
   };
 
   // Render ô chữ cái đơn lẻ
-  // const CharCell = ({ id }) => {
-  //   if (!id) return <div className="w-20 h-20" />; // Nếu là ô trống "", render khung rỗng để giữ vị trí chân thực
-
-  //   const item = charMap[id];
-  //   if (!item) return <div className="w-20 h-20" />;
-  //   const isLearned = learned.includes(item.id);
-
   const CharCell = ({ id }) => {
+    if (!id) return <div className="w-14 h-14 md:w-20 md:h-20" />; // Ô trống giữ vị trí trên mobile & desktop
+
     const item = charMap[id];
-    if (!item) return null;
+    if (!item) return <div className="w-14 h-14 md:w-20 md:h-20" />;
     const isLearned = learned.includes(item.id);
 
     return (
@@ -117,7 +112,7 @@ function Hiragana() {
         <button
           onClick={() => handleCharClick(item)}
           className={`
-            w-20 h-20 rounded-xl border-2 border-black flex flex-col items-center justify-center
+            w-14 h-14 md:w-20 md:h-20 rounded-xl border-2 border-black flex flex-col items-center justify-center
             transition-colors
             ${
               selected?.id === item.id
@@ -126,26 +121,29 @@ function Hiragana() {
             }
           `}
         >
-          <span className="text-2xl font-bold">{item.char}</span>
+          <span className="text-lg md:text-2xl font-bold">{item.char}</span>
           <span
-            className={`text-xs mt-0.5 ${selected?.id === item.id ? "text-stone-300" : "text-stone-600"}`}
+            className={`text-[10px] md:text-xs mt-0.5 ${
+              selected?.id === item.id ? "text-stone-300" : "text-stone-600"
+            }`}
           >
             {item.romaji}
           </span>
         </button>
 
-        {/* Nút mới: mở hướng dẫn viết, góc dưới trái */}
+        {/* Nút xem cách viết */}
         <button
           onClick={() => setStrokeChar(item.char)}
-          className="absolute -bottom-1.5 -left-1.5 w-5 h-5 rounded-full border-2 border-black bg-white flex items-center justify-center text-[10px]"
+          className="absolute -bottom-1 -left-1 md:-bottom-1.5 md:-left-1.5 w-4 h-4 md:w-5 md:h-5 rounded-full border border-black md:border-2 bg-white flex items-center justify-center text-[8px] md:text-[10px]"
           title="Xem cách viết"
         >
           ✍️
         </button>
 
+        {/* Nút đánh dấu đã thuộc */}
         <button
           onClick={() => toggleLearned(item)}
-          className={`absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full border-2 border-black flex items-center justify-center text-[10px] font-bold ${
+          className={`absolute -top-1 -right-1 md:-top-1.5 md:-right-1.5 w-4 h-4 md:w-5 md:h-5 rounded-full border border-black md:border-2 flex items-center justify-center text-[8px] md:text-[10px] font-bold ${
             isLearned ? "bg-green-600 text-white" : "bg-white text-stone-400"
           }`}
         >
@@ -192,15 +190,14 @@ function Hiragana() {
 
       <h1 className="text-2xl font-bold text-stone-800 mb-6">Hiragana</h1>
 
-      {/* Cấu trúc Grid lớn chia màn hình linh hoạt tùy theo độ rộng hiển thị */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-12 w-full items-start">
+      {/* Cấu trúc responsive layout: flex-col trên Mobile, flex-row (hoặc Grid) từ XL trở lên */}
+      <div className="flex flex-col xl:flex-row gap-6 xl:gap-10 items-start overflow-x-auto w-full">
         {/* ================= PHẦN TRÁI: ÂM CƠ BẢN ================= */}
-        <div className="w-full bg-white/50 p-6 rounded-2xl shadow-sm border border-stone-200/60">
+        <div className="w-full xl:w-auto bg-white/50 p-4 md:p-6 rounded-2xl shadow-sm border border-stone-200/60">
           <p className="text-base font-bold text-stone-700 mb-4 border-b border-stone-200 pb-2">
             Âm cơ bản (Seion)
           </p>
-          {/* Ép cố định container thành Grid 5 cột dóng thẳng tắp */}
-          <div className="grid grid-cols-5 gap-y-3 gap-x-2 justify-items-center w-full">
+          <div className="grid grid-cols-5 gap-y-2.5 gap-x-1.5 md:gap-y-3 md:gap-x-2 justify-items-center w-full">
             {SEION_ROWS.flat().map((id, index) => (
               <CharCell key={`seion-${index}`} id={id} />
             ))}
@@ -208,14 +205,13 @@ function Hiragana() {
         </div>
 
         {/* ================= PHẦN PHẢI: BIẾN ÂM & ÂM GHÉP ================= */}
-        <div className="flex flex-col gap-8 w-full">
+        <div className="flex flex-col gap-6 md:gap-8 w-full xl:w-auto">
           {/* Biến âm */}
-          <div className="bg-white/50 p-6 rounded-2xl shadow-sm border border-stone-200/60">
+          <div className="bg-white/50 p-4 md:p-6 rounded-2xl shadow-sm border border-stone-200/60">
             <p className="text-base font-bold text-stone-700 mb-4 border-b border-stone-200 pb-2">
               Biến âm (Dakuten)
             </p>
-            {/* Grid 5 cột vuông vức đồng bộ kích thước */}
-            <div className="grid grid-cols-5 gap-y-3 gap-x-2 justify-items-center w-full">
+            <div className="grid grid-cols-5 gap-y-2.5 gap-x-1.5 md:gap-y-3 md:gap-x-2 justify-items-center w-full">
               {DAKUTEN_ROWS.flat().map((id, index) => (
                 <CharCell key={`dakuten-${index}`} id={id} />
               ))}
@@ -223,12 +219,11 @@ function Hiragana() {
           </div>
 
           {/* Âm ghép */}
-          <div className="bg-white/50 p-6 rounded-2xl shadow-sm border border-stone-200/60">
+          <div className="bg-white/50 p-4 md:p-6 rounded-2xl shadow-sm border border-stone-200/60">
             <p className="text-base font-bold text-stone-700 mb-4 border-b border-stone-200 pb-2">
               Âm ghép (Yoon)
             </p>
-            {/* Đổi riêng nhóm Yoon sang Grid 3 cột tương thích cụm cụ thể */}
-            <div className="grid grid-cols-3 gap-y-3 gap-x-2 justify-items-center w-full max-w-md mx-auto">
+            <div className="grid grid-cols-3 gap-y-2.5 gap-x-1.5 md:gap-y-3 md:gap-x-2 justify-items-center w-full max-w-md mx-auto">
               {YOON_ROWS.flat().map((id, index) => (
                 <CharCell key={`yoon-${index}`} id={id} />
               ))}
@@ -239,7 +234,7 @@ function Hiragana() {
 
       <audio ref={audioRef} />
 
-      {/* Thêm modal, chỉ hiện khi có chữ được chọn để xem cách viết */}
+      {/* Modal hướng dẫn cách viết */}
       {strokeChar && (
         <StrokeOrderModal
           char={strokeChar}
