@@ -34,7 +34,6 @@ function Speaking() {
       .catch(() => setLoading(false));
   }, []);
 
-  // Khởi tạo SpeechRecognition (chuyển giọng nói -> văn bản)
   useEffect(() => {
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -59,7 +58,7 @@ function Speaking() {
 
     recognition.onend = () => {
       setIsListening(false);
-      stopRecording(); // Dừng ghi âm cùng lúc nhận diện dừng
+      stopRecording();
     };
 
     recognitionRef.current = recognition;
@@ -69,7 +68,6 @@ function Speaking() {
     };
   }, []);
 
-  // Kiểm tra trình duyệt có hỗ trợ ghi âm thật không
   useEffect(() => {
     if (!("MediaRecorder" in window) || !navigator.mediaDevices?.getUserMedia) {
       setRecordingSupported(false);
@@ -90,7 +88,6 @@ function Speaking() {
       };
       recorder.onstop = () => {
         const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        // Thu hồi URL cũ trước khi tạo URL mới, tránh rò rỉ bộ nhớ
         if (recordedAudioUrl) URL.revokeObjectURL(recordedAudioUrl);
         setRecordedAudioUrl(URL.createObjectURL(blob));
       };
@@ -110,7 +107,6 @@ function Speaking() {
     ) {
       mediaRecorderRef.current.stop();
     }
-    // Tắt hẳn track micro để đèn báo ghi âm trên trình duyệt tắt đi
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
@@ -120,9 +116,8 @@ function Speaking() {
   const toggleListening = async () => {
     if (isListening) {
       recognitionRef.current?.stop();
-      // stopRecording() sẽ tự chạy trong recognition.onend
     } else {
-      setUserAnswer(""); // Reset câu trả lời cũ khi bắt đầu lượt nói mới
+      setUserAnswer("");
       if (recordedAudioUrl) {
         URL.revokeObjectURL(recordedAudioUrl);
         setRecordedAudioUrl(null);
@@ -230,7 +225,7 @@ function Speaking() {
         </span>
       </div>
 
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-2 mb-6 flex-wrap">
         {LEVELS.map((level) => (
           <button
             key={level}
@@ -278,6 +273,7 @@ function Speaking() {
             </span>
           </div>
 
+          {/* Khối hiển thị câu hỏi - tự động đổi giữa audio và image */}
           <div className="bg-[#f5e6a8] border-2 border-black rounded-xl p-8 mb-4 text-center">
             {currentItem.type === "image" ? (
               <>
@@ -286,9 +282,19 @@ function Speaking() {
                   alt="Câu hỏi"
                   className="w-full max-h-64 object-contain border-2 border-black rounded-lg bg-white mb-3"
                 />
-                <p className="font-bold text-stone-800">
+                <p className="font-bold text-stone-800 mb-3">
                   {currentItem.promptText}
                 </p>
+
+                {/* Chỉ hiện nút loa nếu admin có nhập audioText đi kèm ảnh */}
+                {currentItem.audioText && (
+                  <button
+                    onClick={playQuestion}
+                    className="w-14 h-14 bg-black text-white rounded-full flex items-center justify-center text-xl mx-auto hover:bg-stone-800"
+                  >
+                    🔊
+                  </button>
+                )}
               </>
             ) : (
               <>
@@ -357,7 +363,6 @@ function Speaking() {
               className="w-full p-3 rounded-lg border-2 border-black h-24 bg-white disabled:bg-stone-100"
             />
 
-            {/* Nghe lại giọng nói vừa ghi âm */}
             {recordedAudioUrl && (
               <div className="mt-2 flex items-center gap-2 bg-white border-2 border-black rounded-lg p-2">
                 <span className="text-sm text-stone-600 flex-shrink-0">

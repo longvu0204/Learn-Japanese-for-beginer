@@ -3,7 +3,6 @@ import {
   addSpeakingItem,
   deleteSpeakingItem,
   getAllSpeaking,
-  uploadSpeakingImage,
 } from "../../firebase/firestore";
 import {
   compressImageToBase64,
@@ -73,6 +72,7 @@ function SpeakingManager() {
     window.speechSynthesis.speak(utterance);
   };
 
+  // Nén ảnh ngay khi chọn, chuyển thành base64, KHÔNG cần Storage
   const handleImageSelect = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -132,7 +132,7 @@ function SpeakingManager() {
         id: form.id,
         jlptLevel: form.jlptLevel,
         type: form.type,
-        audioText: form.type === "audio" ? form.audioText : "",
+        audioText: form.audioText,
         promptText: form.type === "image" ? form.promptText : "",
         imageUrl: form.type === "image" ? form.imageUrl : "",
         sampleAnswer: form.sampleAnswer,
@@ -175,6 +175,7 @@ function SpeakingManager() {
       hint: item.hint || "",
     });
     setImagePreview(item.imageUrl || null);
+    setImageSizeWarning("");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -237,36 +238,6 @@ function SpeakingManager() {
             ))}
           </select>
         </div>
-        {form.type === "image" && (
-          <div className="mb-3">
-            <input
-              placeholder="Yêu cầu (vd: Hãy mô tả bức tranh này bằng tiếng Nhật)"
-              value={form.promptText}
-              onChange={(e) => setForm({ ...form, promptText: e.target.value })}
-              className="w-full p-2 rounded border-2 border-black mb-2"
-              required
-            />
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageSelect}
-              className="w-full p-2 rounded border-2 border-black bg-white"
-            />
-            {uploading && (
-              <p className="text-stone-500 text-xs mt-1">Đang nén ảnh...</p>
-            )}
-            {imageSizeWarning && (
-              <p className="text-amber-700 text-xs mt-1">{imageSizeWarning}</p>
-            )}
-            {imagePreview && (
-              <img
-                src={imagePreview}
-                alt="Xem trước"
-                className="mt-2 w-full max-h-48 object-contain border-2 border-black rounded-lg bg-white"
-              />
-            )}
-          </div>
-        )}
 
         {form.type === "audio" ? (
           <div className="flex gap-2 mb-3">
@@ -288,18 +259,43 @@ function SpeakingManager() {
         ) : (
           <div className="mb-3">
             <input
-              placeholder="Yêu cầu (vd: Hãy mô tả bức tranh này bằng tiếng Nhật)"
+              placeholder="Yêu cầu hiển thị (vd: Hãy mô tả bức tranh này bằng tiếng Nhật)"
               value={form.promptText}
               onChange={(e) => setForm({ ...form, promptText: e.target.value })}
               className="w-full p-2 rounded border-2 border-black mb-2"
               required
             />
+
+            <div className="flex gap-2 mb-2">
+              <input
+                placeholder="Câu hỏi tiếng Nhật đi kèm (không bắt buộc, vd: この絵について説明してください。)"
+                value={form.audioText}
+                onChange={(e) =>
+                  setForm({ ...form, audioText: e.target.value })
+                }
+                className="flex-1 p-2 rounded border-2 border-black"
+              />
+              <button
+                type="button"
+                onClick={testPlay}
+                className="px-4 bg-white border-2 border-black rounded-lg font-bold"
+              >
+                🔊 Nghe thử
+              </button>
+            </div>
+
             <input
               type="file"
               accept="image/*"
               onChange={handleImageSelect}
               className="w-full p-2 rounded border-2 border-black bg-white"
             />
+            {uploading && (
+              <p className="text-stone-500 text-xs mt-1">Đang nén ảnh...</p>
+            )}
+            {imageSizeWarning && (
+              <p className="text-amber-700 text-xs mt-1">{imageSizeWarning}</p>
+            )}
             {imagePreview && (
               <img
                 src={imagePreview}
