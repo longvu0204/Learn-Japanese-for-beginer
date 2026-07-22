@@ -6,6 +6,7 @@ import {
   getSpeakingHistory,
 } from "../firebase/firestore";
 import { useAuth } from "../context/AuthContext";
+
 const LEVELS = ["JPD133", "N5", "N4", "N3", "N2", "N1"];
 
 // Xáo trộn mảng theo thuật toán Fisher-Yates, trả về mảng MỚI (không sửa mảng gốc)
@@ -319,13 +320,14 @@ function Speaking() {
 
   return (
     <Layout>
-      <div className="mb-4">
+      <div className="mb-3">
         <span className="inline-block bg-black text-white text-xs font-bold px-3 py-1 rounded-full">
           Phòng Speaking
         </span>
       </div>
 
-      <div className="flex gap-2 mb-6 flex-wrap">
+      {/* Cấp độ chọn - cuộn ngang mượt mà trên di động */}
+      <div className="flex gap-2 mb-4 overflow-x-auto pb-1 -mx-2 px-2 scrollbar-none">
         {LEVELS.map((level) => (
           <button
             key={level}
@@ -337,7 +339,7 @@ function Speaking() {
               setSessionEnded(false);
               setEndReason(null);
             }}
-            className={`px-4 py-2 rounded-lg font-bold border-2 border-black transition-colors ${
+            className={`px-3.5 py-1.5 md:px-4 md:py-2 rounded-lg font-bold border-2 border-black transition-colors text-sm md:text-base shrink-0 ${
               selectedLevel === level
                 ? "bg-black text-white"
                 : "bg-[#f5e6a8] text-stone-800 hover:bg-[#f0dd8a]"
@@ -347,20 +349,22 @@ function Speaking() {
           </button>
         ))}
       </div>
-      <div className="mb-6">
+
+      {/* Lịch sử luyện tập */}
+      <div className="mb-4">
         <button
           onClick={toggleHistory}
-          className="text-sm font-bold text-stone-600 underline hover:text-stone-800"
+          className="text-xs md:text-sm font-bold text-stone-600 underline hover:text-stone-800"
         >
           {showHistory ? "Ẩn lịch sử luyện tập" : "📜 Xem lịch sử luyện tập"}
         </button>
 
         {showHistory && (
-          <div className="mt-3 bg-white border-2 border-black rounded-xl p-4 max-h-64 overflow-y-auto">
+          <div className="mt-2 bg-white border-2 border-black rounded-xl p-3 md:p-4 max-h-56 md:max-h-64 overflow-y-auto">
             {loadingHistory ? (
-              <p className="text-stone-500 text-sm">Đang tải...</p>
+              <p className="text-stone-500 text-xs md:text-sm">Đang tải...</p>
             ) : history.length === 0 ? (
-              <p className="text-stone-500 text-sm">
+              <p className="text-stone-500 text-xs md:text-sm">
                 Chưa có lịch sử luyện tập nào.
               </p>
             ) : (
@@ -368,18 +372,18 @@ function Speaking() {
                 {history.map((h) => (
                   <div
                     key={h.id}
-                    className="flex justify-between items-center border-b border-stone-200 pb-2 last:border-0"
+                    className="flex justify-between items-center border-b border-stone-200 pb-2 last:border-0 gap-2"
                   >
-                    <div>
-                      <span className="inline-block bg-black text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full mr-2">
+                    <div className="flex items-center min-w-0 flex-1">
+                      <span className="inline-block bg-black text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full mr-2 shrink-0">
                         {h.jlptLevel}
                       </span>
-                      <span className="text-sm text-stone-800">
+                      <span className="text-xs md:text-sm text-stone-800 truncate">
                         {h.userAnswer}
                       </span>
                     </div>
                     <span
-                      className={`text-sm font-bold ${
+                      className={`text-xs md:text-sm font-bold shrink-0 ${
                         h.percent === 100
                           ? "text-green-700"
                           : h.percent >= 50
@@ -396,26 +400,28 @@ function Speaking() {
           </div>
         )}
       </div>
+
       {itemsInLevel.length === 0 ? (
-        <p className="text-stone-600">
+        <p className="text-stone-600 text-sm md:text-base">
           Chưa có câu hỏi Speaking nào cho cấp độ {selectedLevel}.
         </p>
       ) : !currentItem ? (
-        <div className="max-w-lg mx-auto bg-[#f5e6a8] border-2 border-black rounded-xl p-8 text-center">
-          <p className="text-stone-700 mb-4">
+        <div className="w-full max-w-lg mx-auto bg-[#f5e6a8] border-2 border-black rounded-xl p-5 md:p-8 text-center">
+          <p className="text-stone-700 text-sm md:text-base mb-4">
             Cấp độ {selectedLevel} có {itemsInLevel.length} câu hỏi Speaking.
           </p>
           <button
             onClick={startPractice}
-            className="bg-black text-white px-6 py-3 rounded-lg font-bold hover:bg-stone-800"
+            className="w-full sm:w-auto bg-black text-white px-6 py-3 rounded-lg font-bold hover:bg-stone-800 text-sm md:text-base"
           >
             ▶ Bắt đầu luyện nói
           </button>
         </div>
       ) : (
-        <div className="max-w-lg mx-auto">
-          <div className="flex justify-between items-center mb-4">
-            <span className="text-sm font-bold text-stone-700">
+        <div className="w-full max-w-lg mx-auto">
+          {/* Thông tin số câu / điểm trung bình */}
+          <div className="flex justify-between items-center mb-3">
+            <span className="text-xs md:text-sm font-bold text-stone-700">
               Đã trả lời: {answeredCount}/{itemsInLevel.length} · Trung bình:{" "}
               {sessionScore.total > 0
                 ? Math.round(sessionScore.sumPercent / sessionScore.total)
@@ -424,22 +430,23 @@ function Speaking() {
             </span>
           </div>
 
-          <div className="bg-[#f5e6a8] border-2 border-black rounded-xl p-8 mb-4 text-center">
+          {/* Khung hiển thị câu hỏi */}
+          <div className="bg-[#f5e6a8] border-2 border-black rounded-xl p-4 md:p-6 mb-4 text-center">
             {currentItem.type === "image" ? (
               <>
                 <img
                   src={currentItem.imageUrl}
                   alt="Câu hỏi"
-                  className="w-full max-h-64 object-contain border-2 border-black rounded-lg bg-white mb-3"
+                  className="w-full max-h-48 md:max-h-64 object-contain border-2 border-black rounded-lg bg-white mb-3"
                 />
-                <p className="font-bold text-stone-800 mb-3">
+                <p className="font-bold text-stone-800 text-sm md:text-base mb-3">
                   {currentItem.promptText}
                 </p>
 
                 {currentItem.audioText && (
                   <button
                     onClick={playQuestion}
-                    className="w-14 h-14 bg-black text-white rounded-full flex items-center justify-center text-xl mx-auto hover:bg-stone-800"
+                    className="w-12 h-12 md:w-14 md:h-14 bg-black text-white rounded-full flex items-center justify-center text-lg md:text-xl mx-auto hover:bg-stone-800"
                   >
                     🔊
                   </button>
@@ -449,11 +456,11 @@ function Speaking() {
               <>
                 <button
                   onClick={playQuestion}
-                  className="w-16 h-16 bg-black text-white rounded-full flex items-center justify-center text-2xl mx-auto mb-3 hover:bg-stone-800"
+                  className="w-14 h-14 md:w-16 md:h-16 bg-black text-white rounded-full flex items-center justify-center text-xl md:text-2xl mx-auto mb-3 hover:bg-stone-800"
                 >
                   🔊
                 </button>
-                <p className="text-stone-600 text-sm">
+                <p className="text-stone-600 text-xs md:text-sm">
                   Bấm để nghe câu hỏi, sau đó trả lời bên dưới
                 </p>
               </>
@@ -462,23 +469,24 @@ function Speaking() {
             {!result && (
               <button
                 onClick={nextQuestion}
-                className="mt-4 text-sm text-stone-600 underline hover:text-stone-800"
+                className="mt-3 text-xs md:text-sm text-stone-600 underline hover:text-stone-800"
               >
                 🎲 Câu khác
               </button>
             )}
           </div>
 
+          {/* Khu vực nhập câu trả lời & Micro */}
           <div className="mb-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-bold text-stone-700">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+              <span className="text-xs md:text-sm font-bold text-stone-700">
                 Câu trả lời của bạn
               </span>
               {micSupported && (
                 <button
                   onClick={toggleListening}
                   disabled={result !== null}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full border-2 border-black text-sm font-bold transition-colors disabled:opacity-40 ${
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full border-2 border-black text-xs md:text-sm font-bold transition-colors disabled:opacity-40 ${
                     isListening
                       ? "bg-red-600 text-white animate-pulse"
                       : "bg-white text-stone-800 hover:bg-stone-100"
@@ -495,7 +503,7 @@ function Speaking() {
                   <button
                     type="button"
                     onClick={toggleHint}
-                    className="text-xs px-3 py-1.5 rounded-full border-2 border-black bg-white hover:bg-stone-100 font-medium"
+                    className="text-[11px] md:text-xs px-2.5 py-1 rounded-full border-2 border-black bg-white hover:bg-stone-100 font-medium"
                   >
                     💡 {showHint ? "Ẩn gợi ý" : "Xem gợi ý"}
                   </button>
@@ -504,7 +512,7 @@ function Speaking() {
                   type="button"
                   onClick={revealNextKeyword}
                   disabled={revealedKeywordCount >= currentItem.keywords.length}
-                  className="text-xs px-3 py-1.5 rounded-full border-2 border-black bg-white hover:bg-stone-100 font-medium disabled:opacity-40"
+                  className="text-[11px] md:text-xs px-2.5 py-1 rounded-full border-2 border-black bg-white hover:bg-stone-100 font-medium disabled:opacity-40"
                 >
                   🔑 Hé lộ từ khóa ({revealedKeywordCount}/
                   {currentItem.keywords.length})
@@ -514,7 +522,9 @@ function Speaking() {
 
             {showHint && currentItem.hint && (
               <div className="bg-amber-50 border border-amber-400 rounded-lg p-2 mb-2">
-                <p className="text-sm text-amber-800">💡 {currentItem.hint}</p>
+                <p className="text-xs md:text-sm text-amber-800">
+                  💡 {currentItem.hint}
+                </p>
               </div>
             )}
 
@@ -525,7 +535,7 @@ function Speaking() {
                   .map((k) => (
                     <span
                       key={k}
-                      className="bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded-full border border-blue-500"
+                      className="bg-blue-100 text-blue-800 text-xs md:text-sm px-2 py-0.5 md:py-1 rounded-full border border-blue-500"
                     >
                       {k}
                     </span>
@@ -534,13 +544,15 @@ function Speaking() {
             )}
 
             {!micSupported && (
-              <p className="text-amber-700 text-xs mb-2">
+              <p className="text-amber-700 text-[11px] md:text-xs mb-2">
                 Trình duyệt này không hỗ trợ nhận diện giọng nói, vui lòng gõ
                 câu trả lời hoặc dùng Chrome/Edge.
               </p>
             )}
             {micError && (
-              <p className="text-red-600 text-xs mb-2">{micError}</p>
+              <p className="text-red-600 text-[11px] md:text-xs mb-2">
+                {micError}
+              </p>
             )}
 
             <textarea
@@ -548,15 +560,19 @@ function Speaking() {
               onChange={(e) => setUserAnswer(e.target.value)}
               placeholder="Nhập câu trả lời hoặc bấm nút Nói..."
               disabled={result !== null}
-              className="w-full p-3 rounded-lg border-2 border-black h-24 bg-white disabled:bg-stone-100"
+              className="w-full p-2.5 md:p-3 rounded-lg border-2 border-black h-20 md:h-24 bg-white disabled:bg-stone-100 text-sm md:text-base"
             />
 
             {recordedAudioUrl && (
-              <div className="mt-2 flex items-center gap-2 bg-white border-2 border-black rounded-lg p-2">
-                <span className="text-sm text-stone-600 flex-shrink-0">
+              <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 bg-white border-2 border-black rounded-lg p-2">
+                <span className="text-xs md:text-sm text-stone-600 shrink-0">
                   🎧 Bản ghi của bạn:
                 </span>
-                <audio controls src={recordedAudioUrl} className="flex-1 h-8" />
+                <audio
+                  controls
+                  src={recordedAudioUrl}
+                  className="w-full sm:flex-1 h-8"
+                />
               </div>
             )}
 
@@ -570,18 +586,19 @@ function Speaking() {
             )}
           </div>
 
+          {/* Nút Chấm điểm / Kết quả */}
           {!result ? (
             <button
               onClick={gradeAnswer}
               disabled={!userAnswer.trim()}
-              className="w-full bg-black text-white p-3 rounded-lg font-bold hover:bg-stone-800 disabled:opacity-40"
+              className="w-full bg-black text-white p-3 rounded-lg font-bold hover:bg-stone-800 disabled:opacity-40 text-sm md:text-base"
             >
               Chấm điểm
             </button>
           ) : (
-            <div className="bg-white border-2 border-black rounded-xl p-5">
+            <div className="bg-white border-2 border-black rounded-xl p-4 md:p-5">
               <p
-                className={`font-bold text-lg mb-3 ${getFeedbackLabel(result.percent).color}`}
+                className={`font-bold text-base md:text-lg mb-2 ${getFeedbackLabel(result.percent).color}`}
               >
                 {getFeedbackLabel(result.percent).text} ({result.percent}%)
               </p>
@@ -593,7 +610,7 @@ function Speaking() {
                     {result.matched.map((k) => (
                       <span
                         key={k}
-                        className="bg-green-100 text-green-800 text-sm px-2 py-1 rounded-full border border-green-600"
+                        className="bg-green-100 text-green-800 text-xs md:text-sm px-2 py-0.5 rounded-full border border-green-600"
                       >
                         ✓ {k}
                       </span>
@@ -609,7 +626,7 @@ function Speaking() {
                     {result.missing.map((k) => (
                       <span
                         key={k}
-                        className="bg-red-100 text-red-700 text-sm px-2 py-1 rounded-full border border-red-500"
+                        className="bg-red-100 text-red-700 text-xs md:text-sm px-2 py-0.5 rounded-full border border-red-500"
                       >
                         ✕ {k}
                       </span>
@@ -619,40 +636,40 @@ function Speaking() {
               )}
 
               {recordedAudioUrl && (
-                <div className="mb-3 flex items-center gap-2 bg-stone-100 rounded-lg p-2">
-                  <span className="text-sm text-stone-600 flex-shrink-0">
+                <div className="mb-3 flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 bg-stone-100 rounded-lg p-2">
+                  <span className="text-xs md:text-sm text-stone-600 shrink-0">
                     🎧 Bản ghi của bạn:
                   </span>
                   <audio
                     controls
                     src={recordedAudioUrl}
-                    className="flex-1 h-8"
+                    className="w-full sm:flex-1 h-8"
                   />
                 </div>
               )}
 
               <div className="bg-stone-100 rounded-lg p-3 mb-4">
                 <p className="text-xs text-stone-500 mb-1">Câu trả lời mẫu</p>
-                <p className="font-medium text-stone-900">
+                <p className="font-medium text-stone-900 text-sm md:text-base">
                   {currentItem.sampleAnswer}
                 </p>
               </div>
 
               {sessionEnded ? (
-                <div className="bg-stone-100 border-2 border-black rounded-lg p-4 text-center">
-                  <p className="font-bold text-lg mb-1">
+                <div className="bg-stone-100 border-2 border-black rounded-lg p-3.5 md:p-4 text-center">
+                  <p className="font-bold text-base md:text-lg mb-1">
                     {endReason === "completed"
                       ? "🎉 Hoàn thành xuất sắc!"
                       : "Phiên luyện tập kết thúc"}
                   </p>
-                  <p className="text-sm text-stone-600 mb-3">
+                  <p className="text-xs md:text-sm text-stone-600 mb-3">
                     Bạn đã trả lời {answeredCount}/{itemsInLevel.length} câu
                     {endReason === "wrong" &&
                       " — dừng lại vì có câu trả lời chưa khớp đủ từ khóa"}
                   </p>
                   <button
                     onClick={handleRetry}
-                    className="w-full bg-black text-white p-3 rounded-lg font-bold hover:bg-stone-800"
+                    className="w-full bg-black text-white p-3 rounded-lg font-bold hover:bg-stone-800 text-sm md:text-base"
                   >
                     🔄 Làm lại từ đầu
                   </button>
@@ -660,7 +677,7 @@ function Speaking() {
               ) : (
                 <button
                   onClick={nextQuestion}
-                  className="w-full bg-black text-white p-3 rounded-lg font-bold hover:bg-stone-800"
+                  className="w-full bg-black text-white p-3 rounded-lg font-bold hover:bg-stone-800 text-sm md:text-base"
                 >
                   Câu tiếp theo →
                 </button>
@@ -669,6 +686,8 @@ function Speaking() {
           )}
         </div>
       )}
+
+      <audio ref={audioRef} />
     </Layout>
   );
 }
