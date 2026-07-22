@@ -7,6 +7,7 @@ import QuizManager from "../components/admin/QuizManager";
 import FlashcardManager from "../components/admin/FlashcardManager";
 import GrammarManager from "../components/admin/GrammarManager";
 import ListeningManager from "../components/admin/ListeningManager";
+import SpeakingManager from "../components/admin/SpeakingManager";
 
 const TABS = [
   { key: "hiragana", label: "Hiragana" },
@@ -16,6 +17,7 @@ const TABS = [
   { key: "flashcard", label: "Flashcard" },
   { key: "quiz", label: "Quiz" },
   { key: "listening", label: "Luyện nghe" },
+  { key: "speaking", label: "Speaking" },
 ];
 
 function AdminDashboard() {
@@ -36,6 +38,7 @@ function AdminDashboard() {
       {activeTab === "flashcard" && <FlashcardManager />}
       {activeTab === "quiz" && <QuizManager />}
       {activeTab === "listening" && <ListeningManager />}
+      {activeTab === "speaking" && <SpeakingManager />}
     </Layout>
   );
 }

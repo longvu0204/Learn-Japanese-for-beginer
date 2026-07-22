@@ -10,6 +10,7 @@ const MENU_ITEMS = [
   { path: "/flashcard", label: "Flashcard", icon: "🗂" },
   { path: "/quiz", label: "Trắc nghiệm", icon: "📝" },
   { path: "/listening", label: "Luyện nghe", icon: "🎧" },
+  { path: "/speaking", label: "Speaking", icon: "🎤" },
 ];
 
 function Sidebar() {

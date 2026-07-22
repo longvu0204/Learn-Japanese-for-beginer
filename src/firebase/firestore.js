@@ -190,3 +190,17 @@ export const addListeningItem = async (itemData) => {
 export const deleteListeningItem = async (id) => {
   await deleteDoc(doc(db, "listening", id));
 };
+
+export const getAllSpeaking = async () => {
+  const snapshot = await getDocs(collection(db, "speaking"));
+  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+};
+
+export const addSpeakingItem = async (itemData) => {
+  const { id, ...data } = itemData;
+  await setDoc(doc(db, "speaking", id), data);
+};
+
+export const deleteSpeakingItem = async (id) => {
+  await deleteDoc(doc(db, "speaking", id));
+};
