@@ -5,7 +5,7 @@ import {
   getAllSpeaking,
 } from "../../firebase/firestore";
 
-const LEVELS = ["N5", "N4", "N3", "N2", "N1"];
+const LEVELS = ["JPD133", "N5", "N4", "N3", "N2", "N1"];
 
 function computeNextId(items) {
   let maxNum = 0;
@@ -23,6 +23,7 @@ function SpeakingManager() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterLevel, setFilterLevel] = useState("ALL");
+  const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState({
     id: "",
     jlptLevel: "N5",
@@ -57,6 +58,18 @@ function SpeakingManager() {
     window.speechSynthesis.speak(utterance);
   };
 
+  const resetForm = (newItems) => {
+    setForm({
+      id: computeNextId(newItems),
+      jlptLevel: form.jlptLevel,
+      audioText: "",
+      sampleAnswer: "",
+      keywordsText: "",
+      hint: "",
+    });
+    setIsEditing(false);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -72,16 +85,13 @@ function SpeakingManager() {
         keywords,
         hint: form.hint,
       });
-      setMessage(`Đã thêm câu Speaking (${form.jlptLevel})`);
+      setMessage(
+        isEditing
+          ? `Đã cập nhật "${form.id}"`
+          : `Đã thêm câu Speaking (${form.jlptLevel})`,
+      );
       const newItems = await loadItems();
-      setForm({
-        id: computeNextId(newItems),
-        jlptLevel: form.jlptLevel,
-        audioText: "",
-        sampleAnswer: "",
-        keywordsText: "",
-        hint: "",
-      });
+      resetForm(newItems);
     } catch (err) {
       setMessage("Lỗi: " + err.message);
     }
@@ -90,7 +100,28 @@ function SpeakingManager() {
   const handleDelete = async (id) => {
     if (!confirm(`Xóa câu Speaking "${id}"?`)) return;
     await deleteSpeakingItem(id);
-    loadItems();
+    const newItems = await loadItems();
+    if (form.id === id && isEditing) {
+      resetForm(newItems);
+    }
+  };
+
+  // Bấm vào 1 câu có sẵn để nạp dữ liệu vào form, chuyển sang chế độ sửa
+  const handleEdit = (item) => {
+    setIsEditing(true);
+    setForm({
+      id: item.id,
+      jlptLevel: item.jlptLevel,
+      audioText: item.audioText,
+      sampleAnswer: item.sampleAnswer,
+      keywordsText: item.keywords.join(", "),
+      hint: item.hint || "",
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleCancelEdit = () => {
+    resetForm(items);
   };
 
   const displayedItems =
@@ -108,9 +139,20 @@ function SpeakingManager() {
         onSubmit={handleSubmit}
         className="bg-[#f5e6a8] border-2 border-black rounded-xl p-5 mb-6 max-w-2xl"
       >
-        <p className="text-sm font-bold text-stone-700 mb-3">
-          ID sẽ tạo: {form.id}
-        </p>
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm font-bold text-stone-700">
+            {isEditing ? `Đang sửa: ${form.id}` : `ID sẽ tạo: ${form.id}`}
+          </span>
+          {isEditing && (
+            <button
+              type="button"
+              onClick={handleCancelEdit}
+              className="text-sm text-stone-600 underline"
+            >
+              Hủy sửa, thêm mới
+            </button>
+          )}
+        </div>
 
         <select
           value={form.jlptLevel}
@@ -166,7 +208,7 @@ function SpeakingManager() {
           type="submit"
           className="w-full bg-black text-white p-3 rounded-lg font-bold"
         >
-          Thêm câu Speaking
+          {isEditing ? "Cập nhật" : "Thêm câu Speaking"}
         </button>
         {message && (
           <p className="text-green-700 text-sm mt-2 font-medium">{message}</p>
@@ -212,7 +254,8 @@ function SpeakingManager() {
           {displayedItems.map((item) => (
             <div
               key={item.id}
-              className="bg-white border-2 border-black rounded-lg p-3 flex justify-between items-center"
+              onClick={() => handleEdit(item)}
+              className="bg-white border-2 border-black rounded-lg p-3 flex justify-between items-center cursor-pointer hover:bg-stone-50"
             >
               <div>
                 <span className="inline-block bg-black text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full mr-2">
@@ -226,7 +269,10 @@ function SpeakingManager() {
                 </p>
               </div>
               <button
-                onClick={() => handleDelete(item.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete(item.id);
+                }}
                 className="w-6 h-6 bg-red-600 text-white rounded-full text-xs font-bold flex-shrink-0"
               >
                 ✕

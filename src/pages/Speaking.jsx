@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import Layout from "../components/Layout";
 import { getAllSpeaking } from "../firebase/firestore";
 
-const LEVELS = ["N5", "N4", "N3", "N2", "N1"];
+const LEVELS = ["JPD133", "N5", "N4", "N3", "N2", "N1"];
 
 function Speaking() {
   const [allItems, setAllItems] = useState([]);
@@ -175,6 +175,16 @@ function Speaking() {
               <p className="text-stone-500 text-xs mt-2 italic">
                 💡 {currentItem.hint}
               </p>
+            )}
+
+            {/* Nút đổi sang câu ngẫu nhiên khác, dùng được cả khi chưa trả lời */}
+            {!result && (
+              <button
+                onClick={nextQuestion}
+                className="mt-4 text-sm text-stone-600 underline hover:text-stone-800"
+              >
+                🎲 Câu khác
+              </button>
             )}
           </div>
 
