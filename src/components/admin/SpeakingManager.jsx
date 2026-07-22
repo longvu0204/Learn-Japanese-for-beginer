@@ -3,9 +3,18 @@ import {
   addSpeakingItem,
   deleteSpeakingItem,
   getAllSpeaking,
+  uploadSpeakingImage,
 } from "../../firebase/firestore";
+import {
+  compressImageToBase64,
+  estimateBase64Size,
+} from "../../utils/imageUtils";
 
 const LEVELS = ["JPD133", "N5", "N4", "N3", "N2", "N1"];
+const TYPES = [
+  { value: "audio", label: "Câu hỏi bằng giọng nói" },
+  { value: "image", label: "Câu hỏi bằng hình ảnh" },
+];
 
 function computeNextId(items) {
   let maxNum = 0;
@@ -24,10 +33,16 @@ function SpeakingManager() {
   const [loading, setLoading] = useState(true);
   const [filterLevel, setFilterLevel] = useState("ALL");
   const [isEditing, setIsEditing] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [imageSizeWarning, setImageSizeWarning] = useState("");
   const [form, setForm] = useState({
     id: "",
     jlptLevel: "N5",
+    type: "audio",
     audioText: "",
+    promptText: "",
+    imageUrl: "",
     sampleAnswer: "",
     keywordsText: "",
     hint: "",
@@ -58,33 +73,73 @@ function SpeakingManager() {
     window.speechSynthesis.speak(utterance);
   };
 
+  const handleImageSelect = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploading(true);
+    setImageSizeWarning("");
+    try {
+      const base64 = await compressImageToBase64(file, 600, 0.7);
+      const sizeKB = Math.round(estimateBase64Size(base64) / 1024);
+
+      if (sizeKB > 700) {
+        setImageSizeWarning(
+          `Ảnh sau khi nén vẫn khá lớn (~${sizeKB}KB). Nên chọn ảnh khác đơn giản hơn.`,
+        );
+      }
+
+      setForm((prev) => ({ ...prev, imageUrl: base64 }));
+      setImagePreview(base64);
+    } catch (err) {
+      setMessage("Lỗi xử lý ảnh: " + err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const resetForm = (newItems) => {
     setForm({
       id: computeNextId(newItems),
       jlptLevel: form.jlptLevel,
+      type: "audio",
       audioText: "",
+      promptText: "",
+      imageUrl: "",
       sampleAnswer: "",
       keywordsText: "",
       hint: "",
     });
+    setImagePreview(null);
+    setImageSizeWarning("");
     setIsEditing(false);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      if (form.type === "image" && !form.imageUrl) {
+        setMessage("Vui lòng chọn ảnh cho câu hỏi dạng hình ảnh.");
+        return;
+      }
+
       const keywords = form.keywordsText
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean);
+
       await addSpeakingItem({
         id: form.id,
         jlptLevel: form.jlptLevel,
-        audioText: form.audioText,
+        type: form.type,
+        audioText: form.type === "audio" ? form.audioText : "",
+        promptText: form.type === "image" ? form.promptText : "",
+        imageUrl: form.type === "image" ? form.imageUrl : "",
         sampleAnswer: form.sampleAnswer,
         keywords,
         hint: form.hint,
       });
+
       setMessage(
         isEditing
           ? `Đã cập nhật "${form.id}"`
@@ -106,17 +161,20 @@ function SpeakingManager() {
     }
   };
 
-  // Bấm vào 1 câu có sẵn để nạp dữ liệu vào form, chuyển sang chế độ sửa
   const handleEdit = (item) => {
     setIsEditing(true);
     setForm({
       id: item.id,
       jlptLevel: item.jlptLevel,
-      audioText: item.audioText,
+      type: item.type || "audio",
+      audioText: item.audioText || "",
+      promptText: item.promptText || "",
+      imageUrl: item.imageUrl || "",
       sampleAnswer: item.sampleAnswer,
       keywordsText: item.keywords.join(", "),
       hint: item.hint || "",
     });
+    setImagePreview(item.imageUrl || null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -154,44 +212,113 @@ function SpeakingManager() {
           )}
         </div>
 
-        <select
-          value={form.jlptLevel}
-          onChange={(e) => setForm({ ...form, jlptLevel: e.target.value })}
-          className="p-2 rounded border-2 border-black bg-white mb-3"
-        >
-          {LEVELS.map((l) => (
-            <option key={l} value={l}>
-              {l}
-            </option>
-          ))}
-        </select>
-
-        <div className="flex gap-2 mb-3">
-          <input
-            placeholder="Câu hỏi tiếng Nhật (vd: お名前は何ですか。)"
-            value={form.audioText}
-            onChange={(e) => setForm({ ...form, audioText: e.target.value })}
-            className="flex-1 p-2 rounded border-2 border-black"
-            required
-          />
-          <button
-            type="button"
-            onClick={testPlay}
-            className="px-4 bg-white border-2 border-black rounded-lg font-bold"
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <select
+            value={form.jlptLevel}
+            onChange={(e) => setForm({ ...form, jlptLevel: e.target.value })}
+            className="p-2 rounded border-2 border-black bg-white"
           >
-            🔊 Nghe thử
-          </button>
+            {LEVELS.map((l) => (
+              <option key={l} value={l}>
+                {l}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={form.type}
+            onChange={(e) => setForm({ ...form, type: e.target.value })}
+            className="p-2 rounded border-2 border-black bg-white"
+          >
+            {TYPES.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </select>
         </div>
+        {form.type === "image" && (
+          <div className="mb-3">
+            <input
+              placeholder="Yêu cầu (vd: Hãy mô tả bức tranh này bằng tiếng Nhật)"
+              value={form.promptText}
+              onChange={(e) => setForm({ ...form, promptText: e.target.value })}
+              className="w-full p-2 rounded border-2 border-black mb-2"
+              required
+            />
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageSelect}
+              className="w-full p-2 rounded border-2 border-black bg-white"
+            />
+            {uploading && (
+              <p className="text-stone-500 text-xs mt-1">Đang nén ảnh...</p>
+            )}
+            {imageSizeWarning && (
+              <p className="text-amber-700 text-xs mt-1">{imageSizeWarning}</p>
+            )}
+            {imagePreview && (
+              <img
+                src={imagePreview}
+                alt="Xem trước"
+                className="mt-2 w-full max-h-48 object-contain border-2 border-black rounded-lg bg-white"
+              />
+            )}
+          </div>
+        )}
+
+        {form.type === "audio" ? (
+          <div className="flex gap-2 mb-3">
+            <input
+              placeholder="Câu hỏi tiếng Nhật (vd: お名前は何ですか。)"
+              value={form.audioText}
+              onChange={(e) => setForm({ ...form, audioText: e.target.value })}
+              className="flex-1 p-2 rounded border-2 border-black"
+              required
+            />
+            <button
+              type="button"
+              onClick={testPlay}
+              className="px-4 bg-white border-2 border-black rounded-lg font-bold"
+            >
+              🔊 Nghe thử
+            </button>
+          </div>
+        ) : (
+          <div className="mb-3">
+            <input
+              placeholder="Yêu cầu (vd: Hãy mô tả bức tranh này bằng tiếng Nhật)"
+              value={form.promptText}
+              onChange={(e) => setForm({ ...form, promptText: e.target.value })}
+              className="w-full p-2 rounded border-2 border-black mb-2"
+              required
+            />
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageSelect}
+              className="w-full p-2 rounded border-2 border-black bg-white"
+            />
+            {imagePreview && (
+              <img
+                src={imagePreview}
+                alt="Xem trước"
+                className="mt-2 w-full max-h-48 object-contain border-2 border-black rounded-lg bg-white"
+              />
+            )}
+          </div>
+        )}
 
         <input
-          placeholder="Câu trả lời mẫu (vd: 私の名前は田中です。)"
+          placeholder="Câu trả lời mẫu"
           value={form.sampleAnswer}
           onChange={(e) => setForm({ ...form, sampleAnswer: e.target.value })}
           className="w-full p-2 rounded border-2 border-black mb-3"
           required
         />
         <input
-          placeholder="Từ khóa bắt buộc, cách nhau bởi dấu phẩy (vd: 名前, です)"
+          placeholder="Từ khóa bắt buộc, cách nhau bởi dấu phẩy"
           value={form.keywordsText}
           onChange={(e) => setForm({ ...form, keywordsText: e.target.value })}
           className="w-full p-2 rounded border-2 border-black mb-3"
@@ -206,9 +333,14 @@ function SpeakingManager() {
 
         <button
           type="submit"
-          className="w-full bg-black text-white p-3 rounded-lg font-bold"
+          disabled={uploading}
+          className="w-full bg-black text-white p-3 rounded-lg font-bold disabled:opacity-50"
         >
-          {isEditing ? "Cập nhật" : "Thêm câu Speaking"}
+          {uploading
+            ? "Đang xử lý ảnh..."
+            : isEditing
+              ? "Cập nhật"
+              : "Thêm câu Speaking"}
         </button>
         {message && (
           <p className="text-green-700 text-sm mt-2 font-medium">{message}</p>
@@ -257,16 +389,28 @@ function SpeakingManager() {
               onClick={() => handleEdit(item)}
               className="bg-white border-2 border-black rounded-lg p-3 flex justify-between items-center cursor-pointer hover:bg-stone-50"
             >
-              <div>
-                <span className="inline-block bg-black text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full mr-2">
-                  {item.jlptLevel}
-                </span>
-                <span className="font-medium text-stone-900">
-                  {item.audioText}
-                </span>
-                <p className="text-xs text-stone-500 mt-1">
-                  Từ khóa: {item.keywords.join(", ")}
-                </p>
+              <div className="flex items-center gap-3">
+                {item.type === "image" && item.imageUrl && (
+                  <img
+                    src={item.imageUrl}
+                    alt=""
+                    className="w-12 h-12 object-cover border border-black rounded"
+                  />
+                )}
+                <div>
+                  <span className="inline-block bg-black text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full mr-2">
+                    {item.jlptLevel}
+                  </span>
+                  <span className="inline-block bg-stone-300 text-stone-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full mr-2">
+                    {item.type === "image" ? "🖼 Ảnh" : "🔊 Âm thanh"}
+                  </span>
+                  <p className="font-medium text-stone-900">
+                    {item.type === "image" ? item.promptText : item.audioText}
+                  </p>
+                  <p className="text-xs text-stone-500 mt-1">
+                    Từ khóa: {item.keywords.join(", ")}
+                  </p>
+                </div>
               </div>
               <button
                 onClick={(e) => {

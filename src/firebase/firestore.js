@@ -12,6 +12,8 @@ import {
   arrayUnion,
   arrayRemove,
 } from "firebase/firestore";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { storage } from "./config";
 
 // Tạo hồ sơ user mới trong collection "users"
 export const createUserProfile = async (uid, data) => {

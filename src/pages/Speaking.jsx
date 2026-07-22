@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Layout from "../components/Layout";
 import { getAllSpeaking } from "../firebase/firestore";
 
@@ -10,8 +10,18 @@ function Speaking() {
   const [selectedLevel, setSelectedLevel] = useState("N5");
   const [currentItem, setCurrentItem] = useState(null);
   const [userAnswer, setUserAnswer] = useState("");
-  const [result, setResult] = useState(null); // null | { matched, missing, percent }
+  const [result, setResult] = useState(null);
   const [sessionScore, setSessionScore] = useState({ total: 0, sumPercent: 0 });
+  const [isListening, setIsListening] = useState(false);
+  const [micSupported, setMicSupported] = useState(true);
+  const [recordingSupported, setRecordingSupported] = useState(true);
+  const [recordedAudioUrl, setRecordedAudioUrl] = useState(null);
+  const [micError, setMicError] = useState("");
+
+  const recognitionRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const streamRef = useRef(null);
 
   const itemsInLevel = allItems.filter((i) => i.jlptLevel === selectedLevel);
 
@@ -23,6 +33,105 @@ function Speaking() {
       })
       .catch(() => setLoading(false));
   }, []);
+
+  // Khởi tạo SpeechRecognition (chuyển giọng nói -> văn bản)
+  useEffect(() => {
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setMicSupported(false);
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "ja-JP";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setUserAnswer((prev) => prev + transcript);
+    };
+
+    recognition.onerror = (event) => {
+      console.error("Lỗi nhận diện giọng nói:", event.error);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+      stopRecording(); // Dừng ghi âm cùng lúc nhận diện dừng
+    };
+
+    recognitionRef.current = recognition;
+
+    return () => {
+      recognition.stop();
+    };
+  }, []);
+
+  // Kiểm tra trình duyệt có hỗ trợ ghi âm thật không
+  useEffect(() => {
+    if (!("MediaRecorder" in window) || !navigator.mediaDevices?.getUserMedia) {
+      setRecordingSupported(false);
+    }
+  }, []);
+
+  const startRecording = async () => {
+    if (!recordingSupported) return;
+    try {
+      setMicError("");
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      audioChunksRef.current = [];
+
+      const recorder = new MediaRecorder(stream);
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      recorder.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        // Thu hồi URL cũ trước khi tạo URL mới, tránh rò rỉ bộ nhớ
+        if (recordedAudioUrl) URL.revokeObjectURL(recordedAudioUrl);
+        setRecordedAudioUrl(URL.createObjectURL(blob));
+      };
+
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+    } catch (err) {
+      console.error("Lỗi truy cập micro:", err);
+      setMicError("Không thể truy cập micro. Vui lòng cấp quyền và thử lại.");
+    }
+  };
+
+  const stopRecording = () => {
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state !== "inactive"
+    ) {
+      mediaRecorderRef.current.stop();
+    }
+    // Tắt hẳn track micro để đèn báo ghi âm trên trình duyệt tắt đi
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+  };
+
+  const toggleListening = async () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      // stopRecording() sẽ tự chạy trong recognition.onend
+    } else {
+      setUserAnswer(""); // Reset câu trả lời cũ khi bắt đầu lượt nói mới
+      if (recordedAudioUrl) {
+        URL.revokeObjectURL(recordedAudioUrl);
+        setRecordedAudioUrl(null);
+      }
+      await startRecording();
+      recognitionRef.current?.start();
+      setIsListening(true);
+    }
+  };
 
   const pickRandomItem = () => {
     if (itemsInLevel.length === 0) {
@@ -46,6 +155,7 @@ function Speaking() {
     pickRandomItem();
     setUserAnswer("");
     setResult(null);
+    setRecordedAudioUrl(null);
   };
 
   const playQuestion = () => {
@@ -57,25 +167,17 @@ function Speaking() {
     window.speechSynthesis.speak(utterance);
   };
 
-  // Chấm điểm: kiểm tra câu trả lời có chứa bao nhiêu % từ khóa bắt buộc
   const gradeAnswer = () => {
     if (!userAnswer.trim()) return;
-
     const matched = [];
     const missing = [];
-
     currentItem.keywords.forEach((keyword) => {
-      if (userAnswer.includes(keyword)) {
-        matched.push(keyword);
-      } else {
-        missing.push(keyword);
-      }
+      if (userAnswer.includes(keyword)) matched.push(keyword);
+      else missing.push(keyword);
     });
-
     const percent = Math.round(
       (matched.length / currentItem.keywords.length) * 100,
     );
-
     setResult({ matched, missing, percent });
     setSessionScore((prev) => ({
       total: prev.total + 1,
@@ -88,6 +190,21 @@ function Speaking() {
     setUserAnswer("");
     setResult(null);
     window.speechSynthesis.cancel();
+    if (isListening) {
+      recognitionRef.current?.stop();
+    }
+    if (recordedAudioUrl) {
+      URL.revokeObjectURL(recordedAudioUrl);
+      setRecordedAudioUrl(null);
+    }
+  };
+
+  const clearAnswer = () => {
+    setUserAnswer("");
+    if (recordedAudioUrl) {
+      URL.revokeObjectURL(recordedAudioUrl);
+      setRecordedAudioUrl(null);
+    }
   };
 
   const getFeedbackLabel = (percent) => {
@@ -162,22 +279,36 @@ function Speaking() {
           </div>
 
           <div className="bg-[#f5e6a8] border-2 border-black rounded-xl p-8 mb-4 text-center">
-            <button
-              onClick={playQuestion}
-              className="w-16 h-16 bg-black text-white rounded-full flex items-center justify-center text-2xl mx-auto mb-3 hover:bg-stone-800"
-            >
-              🔊
-            </button>
-            <p className="text-stone-600 text-sm">
-              Bấm để nghe câu hỏi, sau đó trả lời bên dưới
-            </p>
+            {currentItem.type === "image" ? (
+              <>
+                <img
+                  src={currentItem.imageUrl}
+                  alt="Câu hỏi"
+                  className="w-full max-h-64 object-contain border-2 border-black rounded-lg bg-white mb-3"
+                />
+                <p className="font-bold text-stone-800">
+                  {currentItem.promptText}
+                </p>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={playQuestion}
+                  className="w-16 h-16 bg-black text-white rounded-full flex items-center justify-center text-2xl mx-auto mb-3 hover:bg-stone-800"
+                >
+                  🔊
+                </button>
+                <p className="text-stone-600 text-sm">
+                  Bấm để nghe câu hỏi, sau đó trả lời bên dưới
+                </p>
+              </>
+            )}
+
             {currentItem.hint && (
               <p className="text-stone-500 text-xs mt-2 italic">
                 💡 {currentItem.hint}
               </p>
             )}
-
-            {/* Nút đổi sang câu ngẫu nhiên khác, dùng được cả khi chưa trả lời */}
             {!result && (
               <button
                 onClick={nextQuestion}
@@ -188,13 +319,63 @@ function Speaking() {
             )}
           </div>
 
-          <textarea
-            value={userAnswer}
-            onChange={(e) => setUserAnswer(e.target.value)}
-            placeholder="Nhập câu trả lời bằng tiếng Nhật..."
-            disabled={result !== null}
-            className="w-full p-3 rounded-lg border-2 border-black h-24 mb-4 bg-white disabled:bg-stone-100"
-          />
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-bold text-stone-700">
+                Câu trả lời của bạn
+              </span>
+              {micSupported && (
+                <button
+                  onClick={toggleListening}
+                  disabled={result !== null}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full border-2 border-black text-sm font-bold transition-colors disabled:opacity-40 ${
+                    isListening
+                      ? "bg-red-600 text-white animate-pulse"
+                      : "bg-white text-stone-800 hover:bg-stone-100"
+                  }`}
+                >
+                  🎙️ {isListening ? "Đang nghe... (bấm để dừng)" : "Nói"}
+                </button>
+              )}
+            </div>
+
+            {!micSupported && (
+              <p className="text-amber-700 text-xs mb-2">
+                Trình duyệt này không hỗ trợ nhận diện giọng nói, vui lòng gõ
+                câu trả lời hoặc dùng Chrome/Edge.
+              </p>
+            )}
+            {micError && (
+              <p className="text-red-600 text-xs mb-2">{micError}</p>
+            )}
+
+            <textarea
+              value={userAnswer}
+              onChange={(e) => setUserAnswer(e.target.value)}
+              placeholder="Nhập câu trả lời hoặc bấm nút Nói..."
+              disabled={result !== null}
+              className="w-full p-3 rounded-lg border-2 border-black h-24 bg-white disabled:bg-stone-100"
+            />
+
+            {/* Nghe lại giọng nói vừa ghi âm */}
+            {recordedAudioUrl && (
+              <div className="mt-2 flex items-center gap-2 bg-white border-2 border-black rounded-lg p-2">
+                <span className="text-sm text-stone-600 flex-shrink-0">
+                  🎧 Bản ghi của bạn:
+                </span>
+                <audio controls src={recordedAudioUrl} className="flex-1 h-8" />
+              </div>
+            )}
+
+            {userAnswer && !result && (
+              <button
+                onClick={clearAnswer}
+                className="text-xs text-stone-500 underline mt-1"
+              >
+                Xóa và nhập lại
+              </button>
+            )}
+          </div>
 
           {!result ? (
             <button
@@ -241,6 +422,19 @@ function Speaking() {
                       </span>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {recordedAudioUrl && (
+                <div className="mb-3 flex items-center gap-2 bg-stone-100 rounded-lg p-2">
+                  <span className="text-sm text-stone-600 flex-shrink-0">
+                    🎧 Bản ghi của bạn:
+                  </span>
+                  <audio
+                    controls
+                    src={recordedAudioUrl}
+                    className="flex-1 h-8"
+                  />
                 </div>
               )}
 
