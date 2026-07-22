@@ -206,3 +206,32 @@ export const addSpeakingItem = async (itemData) => {
 export const deleteSpeakingItem = async (id) => {
   await deleteDoc(doc(db, "speaking", id));
 };
+
+export const saveSpeakingResult = async (
+  userId,
+  speakingItemId,
+  jlptLevel,
+  userAnswer,
+  percent,
+  matchedKeywords,
+) => {
+  const historyRef = collection(db, "users", userId, "speakingHistory");
+  await addDoc(historyRef, {
+    speakingItemId,
+    jlptLevel,
+    userAnswer,
+    percent,
+    matchedKeywords,
+    completedAt: new Date().toISOString(),
+  });
+};
+
+export const getSpeakingHistory = async (userId, limitCount = 20) => {
+  const historyRef = collection(db, "users", userId, "speakingHistory");
+  const snapshot = await getDocs(historyRef);
+  const all = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  // Sắp xếp mới nhất trước, giới hạn số lượng hiển thị
+  return all
+    .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt))
+    .slice(0, limitCount);
+};

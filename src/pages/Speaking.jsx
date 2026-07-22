@@ -1,10 +1,25 @@
 import { useState, useEffect, useRef } from "react";
 import Layout from "../components/Layout";
-import { getAllSpeaking } from "../firebase/firestore";
-
+import {
+  getAllSpeaking,
+  saveSpeakingResult,
+  getSpeakingHistory,
+} from "../firebase/firestore";
+import { useAuth } from "../context/AuthContext";
 const LEVELS = ["JPD133", "N5", "N4", "N3", "N2", "N1"];
 
+// Xáo trộn mảng theo thuật toán Fisher-Yates, trả về mảng MỚI (không sửa mảng gốc)
+function shuffleArray(arr) {
+  const result = [...arr];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
 function Speaking() {
+  const { currentUser } = useAuth();
   const [allItems, setAllItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedLevel, setSelectedLevel] = useState("N5");
@@ -17,11 +32,34 @@ function Speaking() {
   const [recordingSupported, setRecordingSupported] = useState(true);
   const [recordedAudioUrl, setRecordedAudioUrl] = useState(null);
   const [micError, setMicError] = useState("");
+  const [history, setHistory] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  // Hàng đợi các ID còn lại chưa hiện trong vòng hiện tại - đây là "túi ngẫu nhiên"
+  const [queue, setQueue] = useState([]);
 
   const recognitionRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const streamRef = useRef(null);
+
+  const loadHistory = async () => {
+    setLoadingHistory(true);
+    try {
+      const data = await getSpeakingHistory(currentUser.uid, 20);
+      setHistory(data);
+    } catch (err) {
+      console.error("Lỗi tải lịch sử:", err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const toggleHistory = () => {
+    if (!showHistory) loadHistory();
+    setShowHistory((prev) => !prev);
+  };
 
   const itemsInLevel = allItems.filter((i) => i.jlptLevel === selectedLevel);
 
@@ -128,26 +166,37 @@ function Speaking() {
     }
   };
 
-  const pickRandomItem = () => {
+  // Lấy câu tiếp theo từ hàng đợi - nếu hàng đợi rỗng thì xáo trộn lại toàn bộ danh sách
+  const pickNextFromQueue = (currentQueue) => {
     if (itemsInLevel.length === 0) {
       setCurrentItem(null);
+      setQueue([]);
       return;
     }
-    let next;
-    do {
-      const randomIndex = Math.floor(Math.random() * itemsInLevel.length);
-      next = itemsInLevel[randomIndex];
-    } while (
-      itemsInLevel.length > 1 &&
-      currentItem &&
-      next.id === currentItem.id
-    );
-    setCurrentItem(next);
+
+    let workingQueue = currentQueue;
+
+    if (workingQueue.length === 0) {
+      let ids = shuffleArray(itemsInLevel.map((i) => i.id));
+
+      // Tránh việc câu đầu tiên của vòng mới trùng với câu vừa hiện ở vòng cũ
+      if (currentItem && ids[0] === currentItem.id && ids.length > 1) {
+        [ids[0], ids[1]] = [ids[1], ids[0]];
+      }
+      workingQueue = ids;
+    }
+
+    const nextId = workingQueue[0];
+    const remaining = workingQueue.slice(1);
+    setQueue(remaining);
+
+    const nextItem = itemsInLevel.find((i) => i.id === nextId);
+    setCurrentItem(nextItem || null);
   };
 
   const startPractice = () => {
     setSessionScore({ total: 0, sumPercent: 0 });
-    pickRandomItem();
+    pickNextFromQueue([]); // Bắt đầu vòng mới, hàng đợi rỗng sẽ tự xáo trộn toàn bộ
     setUserAnswer("");
     setResult(null);
     setRecordedAudioUrl(null);
@@ -162,7 +211,7 @@ function Speaking() {
     window.speechSynthesis.speak(utterance);
   };
 
-  const gradeAnswer = () => {
+  const gradeAnswer = async () => {
     if (!userAnswer.trim()) return;
     const matched = [];
     const missing = [];
@@ -178,10 +227,23 @@ function Speaking() {
       total: prev.total + 1,
       sumPercent: prev.sumPercent + percent,
     }));
+
+    try {
+      await saveSpeakingResult(
+        currentUser.uid,
+        currentItem.id,
+        currentItem.jlptLevel,
+        userAnswer,
+        percent,
+        matched,
+      );
+    } catch (err) {
+      console.error("Lỗi lưu lịch sử Speaking:", err);
+    }
   };
 
   const nextQuestion = () => {
-    pickRandomItem();
+    pickNextFromQueue(queue);
     setUserAnswer("");
     setResult(null);
     window.speechSynthesis.cancel();
@@ -233,6 +295,7 @@ function Speaking() {
               setSelectedLevel(level);
               setCurrentItem(null);
               setResult(null);
+              setQueue([]); // Đổi cấp độ -> reset hàng đợi, vòng mới sẽ xáo trộn lại
             }}
             className={`px-4 py-2 rounded-lg font-bold border-2 border-black transition-colors ${
               selectedLevel === level
@@ -244,7 +307,55 @@ function Speaking() {
           </button>
         ))}
       </div>
+      <div className="mb-6">
+        <button
+          onClick={toggleHistory}
+          className="text-sm font-bold text-stone-600 underline hover:text-stone-800"
+        >
+          {showHistory ? "Ẩn lịch sử luyện tập" : "📜 Xem lịch sử luyện tập"}
+        </button>
 
+        {showHistory && (
+          <div className="mt-3 bg-white border-2 border-black rounded-xl p-4 max-h-64 overflow-y-auto">
+            {loadingHistory ? (
+              <p className="text-stone-500 text-sm">Đang tải...</p>
+            ) : history.length === 0 ? (
+              <p className="text-stone-500 text-sm">
+                Chưa có lịch sử luyện tập nào.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {history.map((h) => (
+                  <div
+                    key={h.id}
+                    className="flex justify-between items-center border-b border-stone-200 pb-2 last:border-0"
+                  >
+                    <div>
+                      <span className="inline-block bg-black text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full mr-2">
+                        {h.jlptLevel}
+                      </span>
+                      <span className="text-sm text-stone-800">
+                        {h.userAnswer}
+                      </span>
+                    </div>
+                    <span
+                      className={`text-sm font-bold ${
+                        h.percent === 100
+                          ? "text-green-700"
+                          : h.percent >= 50
+                            ? "text-amber-700"
+                            : "text-red-700"
+                      }`}
+                    >
+                      {h.percent}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
       {itemsInLevel.length === 0 ? (
         <p className="text-stone-600">
           Chưa có câu hỏi Speaking nào cho cấp độ {selectedLevel}.
@@ -273,7 +384,6 @@ function Speaking() {
             </span>
           </div>
 
-          {/* Khối hiển thị câu hỏi - tự động đổi giữa audio và image */}
           <div className="bg-[#f5e6a8] border-2 border-black rounded-xl p-8 mb-4 text-center">
             {currentItem.type === "image" ? (
               <>
@@ -286,7 +396,6 @@ function Speaking() {
                   {currentItem.promptText}
                 </p>
 
-                {/* Chỉ hiện nút loa nếu admin có nhập audioText đi kèm ảnh */}
                 {currentItem.audioText && (
                   <button
                     onClick={playQuestion}
