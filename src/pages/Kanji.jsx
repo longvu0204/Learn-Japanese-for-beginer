@@ -106,12 +106,12 @@ function Kanji() {
       </div>
 
       {/* Tab chọn cấp độ N5-N1 */}
-      <div className="flex gap-2 mb-4">
+      <div className="flex flex-wrap gap-2 mb-4">
         {LEVELS.map((level) => (
           <button
             key={level}
             onClick={() => setSelectedLevel(level)}
-            className={`px-4 py-2 rounded-lg font-bold border-2 border-black transition-colors ${
+            className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg font-bold border-2 border-black transition-colors text-sm md:text-base ${
               selectedLevel === level
                 ? "bg-black text-white"
                 : "bg-[#f5e6a8] text-stone-800 hover:bg-[#f0dd8a]"
@@ -145,22 +145,24 @@ function Kanji() {
             />
           </div>
 
-          <div className="flex gap-6">
-            <div className="w-48 flex flex-col gap-2 max-h-[500px] overflow-y-auto">
+          {/* Thay đổi layout thành dạng cột dọc trên Mobile và hàng ngang trên Desktop */}
+          <div className="flex flex-col md:flex-row gap-6">
+            {/* Danh sách chữ chọn bên trái / bên trên */}
+            <div className="w-full md:w-48 flex flex-col gap-2 max-h-64 md:max-h-[500px] overflow-y-auto pr-1">
               {kanjiList.map((k, index) => {
                 const isLearned = learned.includes(k.id);
                 return (
                   <button
                     key={k.id}
                     onClick={() => setSelectedIndex(index)}
-                    className={`flex items-center gap-3 p-3 rounded-lg border-2 border-black transition-colors relative ${
+                    className={`flex items-center gap-3 p-3 rounded-lg border-2 border-black transition-colors relative shrink-0 ${
                       index === selectedIndex
                         ? "bg-black text-white"
                         : "bg-[#f5e6a8] text-stone-900 hover:bg-[#f0dd8a]"
                     }`}
                   >
                     <span className="text-2xl font-bold">{k.char}</span>
-                    <span className="text-sm">{k.meaning}</span>
+                    <span className="text-sm truncate">{k.meaning}</span>
                     {isLearned && (
                       <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-green-600 text-white rounded-full border-2 border-black flex items-center justify-center text-[10px] font-bold">
                         ✓
@@ -171,7 +173,8 @@ function Kanji() {
               })}
             </div>
 
-            <div className="flex-1 bg-[#f5e6a8] border-2 border-black rounded-xl p-8">
+            {/* Khung hiển thị chi tiết bên phải / bên dưới */}
+            <div className="flex-1 bg-[#f5e6a8] border-2 border-black rounded-xl p-4 md:p-8">
               {(() => {
                 const current = kanjiList[selectedIndex];
                 if (!current) return null;
@@ -181,7 +184,7 @@ function Kanji() {
                   <>
                     <div className="relative mb-6">
                       <div className="text-center">
-                        <span className="text-8xl font-bold text-stone-900">
+                        <span className="text-6xl md:text-8xl font-bold text-stone-900">
                           {current.char}
                         </span>
                       </div>
@@ -193,14 +196,15 @@ function Kanji() {
                       </button>
                     </div>
 
-                    <p className="text-center text-xl font-bold text-stone-800 mb-6">
+                    <p className="text-center text-lg md:text-xl font-bold text-stone-800 mb-6">
                       {current.meaning}
                     </p>
 
-                    <div className="grid grid-cols-3 gap-4 mb-6">
+                    {/* Grid các chỉ số: âm On/Kun, số nét */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-6">
                       <div className="bg-white border-2 border-black rounded-lg p-3 text-center">
                         <p className="text-xs text-stone-500 mb-1">Âm On</p>
-                        <p className="font-bold text-stone-900">
+                        <p className="font-bold text-stone-900 text-sm md:text-base">
                           {current.onyomi.length > 0
                             ? current.onyomi.join(", ")
                             : "—"}
@@ -208,7 +212,7 @@ function Kanji() {
                       </div>
                       <div className="bg-white border-2 border-black rounded-lg p-3 text-center">
                         <p className="text-xs text-stone-500 mb-1">Âm Kun</p>
-                        <p className="font-bold text-stone-900">
+                        <p className="font-bold text-stone-900 text-sm md:text-base">
                           {current.kunyomi.length > 0
                             ? current.kunyomi.join(", ")
                             : "—"}
@@ -216,12 +220,13 @@ function Kanji() {
                       </div>
                       <div className="bg-white border-2 border-black rounded-lg p-3 text-center">
                         <p className="text-xs text-stone-500 mb-1">Số nét</p>
-                        <p className="font-bold text-stone-900">
+                        <p className="font-bold text-stone-900 text-sm md:text-base">
                           {current.strokeCount}
                         </p>
                       </div>
                     </div>
 
+                    {/* Ví dụ từ ghép */}
                     {current.examples?.length > 0 && (
                       <>
                         <p className="text-sm font-bold text-stone-700 mb-2">
@@ -231,7 +236,7 @@ function Kanji() {
                           {current.examples.map((ex, i) => (
                             <div
                               key={i}
-                              className="bg-white border border-stone-300 rounded-lg p-3 flex justify-between"
+                              className="bg-white border border-stone-300 rounded-lg p-3 flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0"
                             >
                               <div>
                                 <span className="font-bold text-stone-900">
@@ -252,7 +257,7 @@ function Kanji() {
 
                     <button
                       onClick={toggleLearned}
-                      className={`w-full p-3 rounded-lg font-bold border-2 border-black ${
+                      className={`w-full p-3 rounded-lg font-bold border-2 border-black transition-colors ${
                         isCurrentLearned
                           ? "bg-green-700 text-white"
                           : "bg-white text-stone-800 hover:bg-stone-100"
