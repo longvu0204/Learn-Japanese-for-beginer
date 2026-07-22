@@ -35,8 +35,13 @@ function Speaking() {
   const [history, setHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [showHint, setShowHint] = useState(false);
+  const [revealedKeywordCount, setRevealedKeywordCount] = useState(0);
 
-  // Hàng đợi các ID còn lại chưa hiện trong vòng hiện tại - đây là "túi ngẫu nhiên"
+  const [sessionEnded, setSessionEnded] = useState(false);
+  const [endReason, setEndReason] = useState(null);
+  const [answeredCount, setAnsweredCount] = useState(0);
+
   const [queue, setQueue] = useState([]);
 
   const recognitionRef = useRef(null);
@@ -166,7 +171,6 @@ function Speaking() {
     }
   };
 
-  // Lấy câu tiếp theo từ hàng đợi - nếu hàng đợi rỗng thì xáo trộn lại toàn bộ danh sách
   const pickNextFromQueue = (currentQueue) => {
     if (itemsInLevel.length === 0) {
       setCurrentItem(null);
@@ -179,7 +183,6 @@ function Speaking() {
     if (workingQueue.length === 0) {
       let ids = shuffleArray(itemsInLevel.map((i) => i.id));
 
-      // Tránh việc câu đầu tiên của vòng mới trùng với câu vừa hiện ở vòng cũ
       if (currentItem && ids[0] === currentItem.id && ids.length > 1) {
         [ids[0], ids[1]] = [ids[1], ids[0]];
       }
@@ -196,10 +199,19 @@ function Speaking() {
 
   const startPractice = () => {
     setSessionScore({ total: 0, sumPercent: 0 });
-    pickNextFromQueue([]); // Bắt đầu vòng mới, hàng đợi rỗng sẽ tự xáo trộn toàn bộ
+    setAnsweredCount(0);
+    setSessionEnded(false);
+    setEndReason(null);
+    pickNextFromQueue([]);
     setUserAnswer("");
     setResult(null);
     setRecordedAudioUrl(null);
+    setShowHint(false);
+    setRevealedKeywordCount(0);
+  };
+
+  const handleRetry = () => {
+    startPractice();
   };
 
   const playQuestion = () => {
@@ -209,6 +221,16 @@ function Speaking() {
     utterance.lang = "ja-JP";
     utterance.rate = 0.9;
     window.speechSynthesis.speak(utterance);
+  };
+
+  const revealNextKeyword = () => {
+    setRevealedKeywordCount((prev) =>
+      Math.min(prev + 1, currentItem.keywords.length),
+    );
+  };
+
+  const toggleHint = () => {
+    setShowHint((prev) => !prev);
   };
 
   const gradeAnswer = async () => {
@@ -240,6 +262,20 @@ function Speaking() {
     } catch (err) {
       console.error("Lỗi lưu lịch sử Speaking:", err);
     }
+
+    const newAnsweredCount = answeredCount + 1;
+    setAnsweredCount(newAnsweredCount);
+
+    if (percent < 100) {
+      setSessionEnded(true);
+      setEndReason("wrong");
+      return;
+    }
+
+    if (newAnsweredCount >= itemsInLevel.length) {
+      setSessionEnded(true);
+      setEndReason("completed");
+    }
   };
 
   const nextQuestion = () => {
@@ -254,6 +290,8 @@ function Speaking() {
       URL.revokeObjectURL(recordedAudioUrl);
       setRecordedAudioUrl(null);
     }
+    setShowHint(false);
+    setRevealedKeywordCount(0);
   };
 
   const clearAnswer = () => {
@@ -295,7 +333,9 @@ function Speaking() {
               setSelectedLevel(level);
               setCurrentItem(null);
               setResult(null);
-              setQueue([]); // Đổi cấp độ -> reset hàng đợi, vòng mới sẽ xáo trộn lại
+              setQueue([]);
+              setSessionEnded(false);
+              setEndReason(null);
             }}
             className={`px-4 py-2 rounded-lg font-bold border-2 border-black transition-colors ${
               selectedLevel === level
@@ -376,11 +416,11 @@ function Speaking() {
         <div className="max-w-lg mx-auto">
           <div className="flex justify-between items-center mb-4">
             <span className="text-sm font-bold text-stone-700">
-              Trung bình:{" "}
+              Đã trả lời: {answeredCount}/{itemsInLevel.length} · Trung bình:{" "}
               {sessionScore.total > 0
                 ? Math.round(sessionScore.sumPercent / sessionScore.total)
                 : 0}
-              % ({sessionScore.total} câu)
+              %
             </span>
           </div>
 
@@ -419,11 +459,6 @@ function Speaking() {
               </>
             )}
 
-            {currentItem.hint && (
-              <p className="text-stone-500 text-xs mt-2 italic">
-                💡 {currentItem.hint}
-              </p>
-            )}
             {!result && (
               <button
                 onClick={nextQuestion}
@@ -453,6 +488,50 @@ function Speaking() {
                 </button>
               )}
             </div>
+
+            {!result && (
+              <div className="flex gap-2 mb-2 flex-wrap">
+                {currentItem.hint && (
+                  <button
+                    type="button"
+                    onClick={toggleHint}
+                    className="text-xs px-3 py-1.5 rounded-full border-2 border-black bg-white hover:bg-stone-100 font-medium"
+                  >
+                    💡 {showHint ? "Ẩn gợi ý" : "Xem gợi ý"}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={revealNextKeyword}
+                  disabled={revealedKeywordCount >= currentItem.keywords.length}
+                  className="text-xs px-3 py-1.5 rounded-full border-2 border-black bg-white hover:bg-stone-100 font-medium disabled:opacity-40"
+                >
+                  🔑 Hé lộ từ khóa ({revealedKeywordCount}/
+                  {currentItem.keywords.length})
+                </button>
+              </div>
+            )}
+
+            {showHint && currentItem.hint && (
+              <div className="bg-amber-50 border border-amber-400 rounded-lg p-2 mb-2">
+                <p className="text-sm text-amber-800">💡 {currentItem.hint}</p>
+              </div>
+            )}
+
+            {revealedKeywordCount > 0 && (
+              <div className="flex flex-wrap gap-1 mb-2">
+                {currentItem.keywords
+                  .slice(0, revealedKeywordCount)
+                  .map((k) => (
+                    <span
+                      key={k}
+                      className="bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded-full border border-blue-500"
+                    >
+                      {k}
+                    </span>
+                  ))}
+              </div>
+            )}
 
             {!micSupported && (
               <p className="text-amber-700 text-xs mb-2">
@@ -559,12 +638,33 @@ function Speaking() {
                 </p>
               </div>
 
-              <button
-                onClick={nextQuestion}
-                className="w-full bg-black text-white p-3 rounded-lg font-bold hover:bg-stone-800"
-              >
-                Câu tiếp theo →
-              </button>
+              {sessionEnded ? (
+                <div className="bg-stone-100 border-2 border-black rounded-lg p-4 text-center">
+                  <p className="font-bold text-lg mb-1">
+                    {endReason === "completed"
+                      ? "🎉 Hoàn thành xuất sắc!"
+                      : "Phiên luyện tập kết thúc"}
+                  </p>
+                  <p className="text-sm text-stone-600 mb-3">
+                    Bạn đã trả lời {answeredCount}/{itemsInLevel.length} câu
+                    {endReason === "wrong" &&
+                      " — dừng lại vì có câu trả lời chưa khớp đủ từ khóa"}
+                  </p>
+                  <button
+                    onClick={handleRetry}
+                    className="w-full bg-black text-white p-3 rounded-lg font-bold hover:bg-stone-800"
+                  >
+                    🔄 Làm lại từ đầu
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={nextQuestion}
+                  className="w-full bg-black text-white p-3 rounded-lg font-bold hover:bg-stone-800"
+                >
+                  Câu tiếp theo →
+                </button>
+              )}
             </div>
           )}
         </div>
