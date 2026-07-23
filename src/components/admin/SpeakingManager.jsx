@@ -31,6 +31,7 @@ function SpeakingManager() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterLevel, setFilterLevel] = useState("ALL");
+  const [searchKeyword, setSearchKeyword] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
@@ -183,10 +184,20 @@ function SpeakingManager() {
     resetForm(items);
   };
 
-  const displayedItems =
-    filterLevel === "ALL"
-      ? items
-      : items.filter((i) => i.jlptLevel === filterLevel);
+  const displayedItems = items.filter((item) => {
+    const matchLevel = filterLevel === "ALL" || item.jlptLevel === filterLevel;
+
+    const keyword = searchKeyword.toLowerCase();
+
+    const matchSearch =
+      keyword === "" ||
+      item.audioText?.toLowerCase().includes(keyword) ||
+      item.promptText?.toLowerCase().includes(keyword) ||
+      item.sampleAnswer?.toLowerCase().includes(keyword) ||
+      item.keywords.some((k) => k.toLowerCase().includes(keyword));
+
+    return matchLevel && matchSearch;
+  });
 
   return (
     <div>
@@ -375,52 +386,67 @@ function SpeakingManager() {
         })}
       </div>
 
-      {loading ? (
-        <p className="text-stone-500">Đang tải...</p>
-      ) : (
-        <div className="flex flex-col gap-2">
-          {displayedItems.map((item) => (
-            <div
-              key={item.id}
-              onClick={() => handleEdit(item)}
-              className="bg-white border-2 border-black rounded-lg p-3 flex justify-between items-center cursor-pointer hover:bg-stone-50"
-            >
-              <div className="flex items-center gap-3">
-                {item.type === "image" && item.imageUrl && (
-                  <img
-                    src={item.imageUrl}
-                    alt=""
-                    className="w-12 h-12 object-cover border border-black rounded"
-                  />
-                )}
-                <div>
-                  <span className="inline-block bg-black text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full mr-2">
-                    {item.jlptLevel}
-                  </span>
-                  <span className="inline-block bg-stone-300 text-stone-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full mr-2">
-                    {item.type === "image" ? "🖼 Ảnh" : "🔊 Âm thanh"}
-                  </span>
-                  <p className="font-medium text-stone-900">
-                    {item.type === "image" ? item.promptText : item.audioText}
-                  </p>
-                  <p className="text-xs text-stone-500 mt-1">
-                    Từ khóa: {item.keywords.join(", ")}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDelete(item.id);
-                }}
-                className="w-6 h-6 bg-red-600 text-white rounded-full text-xs font-bold flex-shrink-0"
+      <div className="mb-4">
+        <input
+          type="text"
+          placeholder="🔍 Tìm theo câu hỏi hoặc từ khóa..."
+          value={searchKeyword}
+          onChange={(e) => setSearchKeyword(e.target.value)}
+          className="w-full p-2 rounded-lg border-2 border-black bg-white"
+        />
+      </div>
+
+      <div className="flex flex-col h-full">
+        {loading ? (
+          <p className="text-stone-500">Đang tải...</p>
+        ) : (
+          <div
+            className="flex-1 overflow-y-auto flex flex-col gap-2 pr-2"
+            style={{ maxHeight: "calc(100vh - 260px)" }}
+          >
+            {displayedItems.map((item) => (
+              <div
+                key={item.id}
+                onClick={() => handleEdit(item)}
+                className="bg-white border-2 border-black rounded-lg p-3 flex justify-between items-start gap-3 cursor-pointer hover:bg-stone-50"
               >
-                ✕
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
+                <div className="flex items-start gap-3 flex-1 min-w-0">
+                  {item.type === "image" && item.imageUrl && (
+                    <img
+                      src={item.imageUrl}
+                      alt=""
+                      className="w-12 h-12 object-cover border border-black rounded"
+                    />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <span className="inline-block bg-black text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full mr-2">
+                      {item.jlptLevel}
+                    </span>
+                    <span className="inline-block bg-stone-300 text-stone-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full mr-2">
+                      {item.type === "image" ? "🖼 Ảnh" : "🔊 Âm thanh"}
+                    </span>
+                    <p className="font-medium text-stone-900 break-words">
+                      {item.type === "image" ? item.promptText : item.audioText}
+                    </p>
+                    <p className="text-xs text-stone-500 mt-1 break-words">
+                      Từ khóa: {item.keywords.join(", ")}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(item.id);
+                  }}
+                  className="w-7 h-7 bg-red-600 text-white rounded-full text-xs font-bold flex-shrink-0 self-start"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

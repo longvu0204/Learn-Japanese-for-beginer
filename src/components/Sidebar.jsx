@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-
+import { logout } from "../firebase/auth";
 const MENU_ITEMS = [
   { path: "/", label: "Trang chủ", icon: "🏠" },
   { path: "/hiragana", label: "Hiragana", icon: "あ" },
@@ -17,6 +17,14 @@ function Sidebar({ isOpen, onClose }) {
   const location = useLocation();
   const { userProfile } = useAuth();
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+      onClose();
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
   return (
     <>
       {/* Lớp phủ tối - chỉ hiện trên mobile khi menu đang mở, bấm vào để đóng */}
@@ -85,9 +93,16 @@ function Sidebar({ isOpen, onClose }) {
         )}
 
         <div className="p-6 border-t border-stone-300">
-          <p className="text-sm text-stone-500 truncate">
+          <p className="text-sm font-medium text-stone-700 truncate">
             {userProfile?.displayName || "Người dùng"}
           </p>
+
+          <button
+            onClick={handleLogout}
+            className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border-2 border-red-500 text-red-600 hover:bg-red-50 transition-colors text-sm font-medium"
+          >
+            🚪 Đăng xuất
+          </button>
         </div>
       </aside>
     </>
