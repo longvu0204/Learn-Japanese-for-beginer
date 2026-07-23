@@ -96,6 +96,25 @@ function Speaking() {
 
     recognition.onerror = (event) => {
       console.error("Lỗi nhận diện giọng nói:", event.error);
+      if (
+        event.error === "not-allowed" ||
+        event.error === "service-not-allowed"
+      ) {
+        setMicError(
+          "Bạn chưa cấp quyền micro. Vào cài đặt trình duyệt để cho phép truy cập micro.",
+        );
+      } else if (event.error === "no-speech") {
+        setMicError("Không nghe thấy giọng nói. Hãy thử nói to và rõ hơn.");
+      } else if (event.error === "network") {
+        setMicError(
+          "Lỗi kết nối mạng khi nhận diện giọng nói. Kiểm tra lại Internet và thử lại.",
+        );
+      } else if (event.error === "audio-capture") {
+        setMicError("Không tìm thấy micro trên thiết bị này.");
+      } else {
+        setMicError("Có lỗi khi nhận diện giọng nói, vui lòng thử lại.");
+      }
+      setIsListening(false);
     };
 
     recognition.onend = () => {
@@ -116,6 +135,25 @@ function Speaking() {
     }
   }, []);
 
+  // Safari không hỗ trợ audio/webm, cần dò định dạng trình duyệt thực sự hỗ trợ
+  const getSupportedMimeType = () => {
+    const candidates = [
+      "audio/webm;codecs=opus",
+      "audio/webm",
+      "audio/mp4",
+      "audio/aac",
+    ];
+    for (const type of candidates) {
+      if (
+        MediaRecorder.isTypeSupported &&
+        MediaRecorder.isTypeSupported(type)
+      ) {
+        return type;
+      }
+    }
+    return ""; // Để trống -> trình duyệt tự chọn định dạng mặc định
+  };
+
   const startRecording = async () => {
     if (!recordingSupported) return;
     try {
@@ -124,21 +162,41 @@ function Speaking() {
       streamRef.current = stream;
       audioChunksRef.current = [];
 
-      const recorder = new MediaRecorder(stream);
+      const mimeType = getSupportedMimeType();
+      const recorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
+
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) audioChunksRef.current.push(e.data);
       };
       recorder.onstop = () => {
-        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        const blob = new Blob(audioChunksRef.current, {
+          type: mimeType || "audio/webm",
+        });
         if (recordedAudioUrl) URL.revokeObjectURL(recordedAudioUrl);
         setRecordedAudioUrl(URL.createObjectURL(blob));
+      };
+      recorder.onerror = (e) => {
+        console.error("Lỗi MediaRecorder:", e.error);
       };
 
       mediaRecorderRef.current = recorder;
       recorder.start();
     } catch (err) {
       console.error("Lỗi truy cập micro:", err);
-      setMicError("Không thể truy cập micro. Vui lòng cấp quyền và thử lại.");
+      if (
+        err.name === "NotAllowedError" ||
+        err.name === "PermissionDeniedError"
+      ) {
+        setMicError(
+          "Bạn chưa cấp quyền micro. Vào cài đặt trình duyệt để cho phép truy cập micro.",
+        );
+      } else if (err.name === "NotFoundError") {
+        setMicError("Không tìm thấy micro trên thiết bị này.");
+      } else {
+        setMicError("Không thể truy cập micro. Vui lòng cấp quyền và thử lại.");
+      }
     }
   };
 
@@ -156,17 +214,35 @@ function Speaking() {
   };
 
   const toggleListening = async () => {
+    if (!micSupported) {
+      setMicError(
+        "Trình duyệt này (thường gặp trên iPhone/Safari) chưa hỗ trợ nhận diện giọng nói. Vui lòng gõ câu trả lời bằng bàn phím.",
+      );
+      return;
+    }
+
     if (isListening) {
       recognitionRef.current?.stop();
-    } else {
-      setUserAnswer("");
-      if (recordedAudioUrl) {
-        URL.revokeObjectURL(recordedAudioUrl);
-        setRecordedAudioUrl(null);
-      }
-      await startRecording();
+      return;
+    }
+
+    setMicError("");
+    setUserAnswer("");
+    if (recordedAudioUrl) {
+      URL.revokeObjectURL(recordedAudioUrl);
+      setRecordedAudioUrl(null);
+    }
+
+    await startRecording();
+
+    try {
       recognitionRef.current?.start();
       setIsListening(true);
+    } catch (err) {
+      // Bắt lỗi InvalidStateError khi bấm quá nhanh (đã start rồi lại start tiếp)
+      console.error("Lỗi khởi động nhận diện giọng nói:", err);
+      setMicError("Không thể bắt đầu nghe, vui lòng thử bấm lại.");
+      stopRecording();
     }
   };
 
