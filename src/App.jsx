@@ -16,6 +16,7 @@ import Kanji from "./pages/Kanji";
 import Grammar from "./pages/Grammar";
 import Listening from "./pages/Listening";
 import Speaking from "./pages/Speaking";
+import Reading from "./pages/Reading";
 
 function App() {
   return (
@@ -129,6 +130,17 @@ function App() {
             <ProtectedRoute>
               <OnboardingGate>
                 <Speaking />
+              </OnboardingGate>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/reading"
+          element={
+            <ProtectedRoute>
+              <OnboardingGate>
+                <Reading />
               </OnboardingGate>
             </ProtectedRoute>
           }

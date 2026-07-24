@@ -235,3 +235,46 @@ export const getSpeakingHistory = async (userId, limitCount = 20) => {
     .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt))
     .slice(0, limitCount);
 };
+
+export const getAllReading = async () => {
+  const snapshot = await getDocs(collection(db, "readingPassages"));
+  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+};
+
+export const addReadingPassage = async (passageData) => {
+  const { id, ...data } = passageData;
+  await setDoc(doc(db, "readingPassages", id), data);
+};
+
+export const deleteReadingPassage = async (id) => {
+  await deleteDoc(doc(db, "readingPassages", id));
+};
+
+// Lưu kết quả luyện đọc vào lịch sử (giống cách saveSpeakingResult)
+export const saveReadingResult = async (
+  userId,
+  passageId,
+  jlptLevel,
+  vocabScore,
+  comprehensionScore,
+  totalScore,
+) => {
+  const historyRef = collection(db, "users", userId, "readingHistory");
+  await addDoc(historyRef, {
+    passageId,
+    jlptLevel,
+    vocabScore,
+    comprehensionScore,
+    totalScore,
+    completedAt: new Date().toISOString(),
+  });
+};
+
+export const getReadingHistory = async (userId, limitCount = 20) => {
+  const historyRef = collection(db, "users", userId, "readingHistory");
+  const snapshot = await getDocs(historyRef);
+  const all = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  return all
+    .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt))
+    .slice(0, limitCount);
+};

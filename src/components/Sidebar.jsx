@@ -11,6 +11,7 @@ const MENU_ITEMS = [
   { path: "/quiz", label: "Trắc nghiệm", icon: "📝" },
   { path: "/listening", label: "Luyện nghe", icon: "🎧" },
   { path: "/speaking", label: "Speaking", icon: "🎤" },
+  { path: "/reading", label: "Luyện đọc", icon: "📖" },
 ];
 
 function Sidebar({ isOpen, onClose }) {

@@ -1,6 +1,7 @@
 import { initializeApp, cert } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { readFileSync } from "fs";
+import { parsePassage } from "../src/utils/furiganaParser.js";
 
 // Đọc file JSON bằng cách thủ công (vì import JSON trực tiếp trong ES Module cần cấu hình thêm)
 const serviceAccount = JSON.parse(
@@ -752,3 +753,41 @@ seed().catch((err) => {
   console.error("Lỗi khi seed dữ liệu:", err);
   process.exit(1);
 });
+
+const readingPassages = [
+  {
+    id: "r1",
+    jlptLevel: "N5",
+    title: "Một ngày của tôi",
+    rawPassage:
+      "わたしは **毎日[まいにち]** **朝[あさ]** **八時[はちじ]**に **起[お]きます**。朝ごはんを **食[た]べて**、学校[がっこう]へ 行[い]きます。学校[がっこう]で **日本語[にほんご]**を **勉強[べんきょう]**します。**昼[ひる]**休[やす]みに 友達[ともだち]と レストランで パンと ジュースを 買[か]います。**夜[よる]**は 家[いえ]で テレビを 見[み]ます。",
+    comprehensionQuestions: [
+      {
+        question: "毎朝、何時に 起きますか。",
+        sampleAnswer: "八時に起きます。",
+        keywords: ["八時", "起きます"],
+      },
+      {
+        question: "昼休みに レストランで 何を 買いますか。",
+        sampleAnswer: "パンとジュースを買います。",
+        keywords: ["パン", "ジュース", "買います"],
+      },
+    ],
+  },
+];
+
+// Trong hàm seed(), thêm đoạn này:
+console.log("Đang seed reading passages...");
+for (const item of readingPassages) {
+  const { id, rawPassage, ...restData } = item;
+  const { quizWords } = parsePassage(rawPassage); // Tự tính từ cần kiểm tra từ cú pháp **word[reading]**
+  await db
+    .collection("readingPassages")
+    .doc(id)
+    .set({
+      ...restData,
+      rawPassage,
+      quizWords,
+    });
+}
+console.log(`✓ Đã thêm ${readingPassages.length} bài đọc`);
