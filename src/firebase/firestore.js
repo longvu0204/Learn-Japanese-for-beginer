@@ -46,16 +46,36 @@ export const saveQuizResult = async (
   score,
   totalQuestions,
   timeSpent,
+  answers,
 ) => {
   const resultsRef = collection(db, "users", userId, "quizResults");
+
   await addDoc(resultsRef, {
     quizId,
     score,
     totalQuestions,
     timeSpent,
+    answers, // <-- thêm dòng này
     completedAt: new Date().toISOString(),
   });
 };
+
+export const getQuizHistory = async (userId, quizId, limitCount = 10) => {
+  const historyRef = collection(db, "users", userId, "quizResults");
+  const snapshot = await getDocs(historyRef);
+
+  const history = snapshot.docs
+    .map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }))
+    .filter((item) => item.quizId === quizId)
+    .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt))
+    .slice(0, limitCount);
+
+  return history;
+};
+
 // Lấy tất cả bộ flashcard
 export const getAllFlashcardDecks = async () => {
   const snapshot = await getDocs(collection(db, "flashcardDecks"));

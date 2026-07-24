@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import Layout from "../components/Layout";
-import { getAllQuizzes, saveQuizResult } from "../firebase/firestore";
+import {
+  getAllQuizzes,
+  saveQuizResult,
+  getQuizHistory,
+} from "../firebase/firestore";
 import { useAuth } from "../context/AuthContext";
 
 const LEVELS = ["N5", "N4", "N3", "N2", "N1"];
@@ -11,7 +15,7 @@ function Quiz() {
   const [loading, setLoading] = useState(true);
   const [selectedLevel, setSelectedLevel] = useState("N5");
   const [selectedQuizId, setSelectedQuizId] = useState(null);
-
+  const [history, setHistory] = useState([]);
   const [currentQIndex, setCurrentQIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [score, setScore] = useState(0);
@@ -19,6 +23,8 @@ function Quiz() {
   const [isFinished, setIsFinished] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const intervalRef = useRef(null);
+  const [answers, setAnswers] = useState([]);
+  const [expandedHistory, setExpandedHistory] = useState(null);
 
   useEffect(() => {
     getAllQuizzes()
@@ -41,6 +47,7 @@ function Quiz() {
     setScore(0);
     setSelectedAnswer(null);
     setIsFinished(false);
+    setAnswers([]);
   };
 
   useEffect(() => {
@@ -68,18 +75,42 @@ function Quiz() {
         score,
         quiz.questions.length,
         timeSpent,
+        answers,
       )
-        .then(() => setIsSaving(false))
+        .then(async () => {
+          const data = await getQuizHistory(currentUser.uid, quiz.id);
+
+          setHistory(data);
+
+          setIsSaving(false);
+        })
         .catch(() => setIsSaving(false));
     }
   }, [isFinished]);
 
   const handleSelectAnswer = (option) => {
     if (selectedAnswer) return;
+
     setSelectedAnswer(option);
+
+    // Lưu đáp án của câu hiện tại
+    setAnswers((prev) => [
+      ...prev,
+      {
+        questionIndex: currentQIndex,
+        question: currentQuestion.question,
+        options: currentQuestion.options,
+        selectedAnswer: option,
+        correctAnswer: currentQuestion.correctAnswer,
+        isCorrect: option === currentQuestion.correctAnswer,
+      },
+    ]);
+
+    // Cộng điểm nếu đúng
     if (option === currentQuestion.correctAnswer) {
       setScore((prev) => prev + 1);
     }
+
     setTimeout(() => {
       if (currentQIndex + 1 < quiz.questions.length) {
         setCurrentQIndex((prev) => prev + 1);
@@ -178,6 +209,97 @@ function Quiz() {
           >
             ← Chọn bài khác
           </button>
+        </div>
+
+        <div className="w-full mt-6 border-t pt-5">
+          <h2 className="font-bold text-lg mb-3">Lịch sử làm bài</h2>
+
+          {history.length === 0 ? (
+            <p className="text-sm text-stone-500">Chưa có lịch sử.</p>
+          ) : (
+            <div className="space-y-3">
+              {history.map((item, index) => (
+                <div
+                  key={item.id}
+                  className="border rounded-lg bg-white overflow-hidden"
+                >
+                  {/* Header */}
+                  <button
+                    onClick={() =>
+                      setExpandedHistory(
+                        expandedHistory === item.id ? null : item.id,
+                      )
+                    }
+                    className="w-full flex justify-between items-center px-4 py-3 hover:bg-stone-50"
+                  >
+                    <div className="text-left">
+                      <p className="font-bold">Lần {history.length - index}</p>
+
+                      <p className="text-xs text-stone-500">
+                        {new Date(item.completedAt).toLocaleString("vi-VN")}
+                      </p>
+                    </div>
+
+                    <div className="text-right">
+                      <p className="font-bold">
+                        {item.score}/{item.totalQuestions}
+                      </p>
+
+                      <p className="text-xs">{item.timeSpent}s</p>
+                    </div>
+                  </button>
+
+                  {/* Chi tiết */}
+                  {expandedHistory === item.id && (
+                    <div className="border-t bg-stone-50 p-4">
+                      {!item.answers || item.answers.length === 0 ? (
+                        <p className="text-sm text-stone-500">
+                          Lần làm này chưa lưu chi tiết câu trả lời.
+                        </p>
+                      ) : (
+                        <div className="space-y-4">
+                          {item.answers.map((answer, i) => (
+                            <div
+                              key={i}
+                              className="border rounded-lg p-3 bg-white"
+                            >
+                              <p className="font-semibold mb-2">Câu {i + 1}</p>
+
+                              <p className="mb-2">{answer.question}</p>
+
+                              <p>
+                                <span className="font-medium">Bạn chọn:</span>{" "}
+                                <span
+                                  className={
+                                    answer.isCorrect
+                                      ? "text-green-700 font-bold"
+                                      : "text-red-600 font-bold"
+                                  }
+                                >
+                                  {answer.selectedAnswer}
+                                </span>
+                              </p>
+
+                              {!answer.isCorrect && (
+                                <p>
+                                  <span className="font-medium">
+                                    Đáp án đúng:
+                                  </span>{" "}
+                                  <span className="text-green-700 font-bold">
+                                    {answer.correctAnswer}
+                                  </span>
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </Layout>
     );

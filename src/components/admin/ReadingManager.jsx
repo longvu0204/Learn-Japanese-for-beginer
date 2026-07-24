@@ -284,7 +284,7 @@ function ReadingManager() {
               className="w-full p-2 rounded border-2 border-black mb-2 text-sm"
               required
             />
-            {/* <input
+            <input
               placeholder="Câu trả lời mẫu"
               value={q.sampleAnswer}
               onChange={(e) =>
@@ -292,7 +292,7 @@ function ReadingManager() {
               }
               className="w-full p-2 rounded border-2 border-black mb-2 text-sm"
               required
-            /> */}
+            />
             <input
               placeholder="Từ khóa bắt buộc, cách nhau bởi dấu phẩy"
               value={q.keywordsText}
