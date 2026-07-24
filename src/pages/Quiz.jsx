@@ -41,13 +41,17 @@ function Quiz() {
 
   const startQuiz = (quizId) => {
     const target = quizzes.find((q) => q.id === quizId);
+
+    clearInterval(intervalRef.current);
+
     setSelectedQuizId(quizId);
     setTimeLeft(target.timeLimit);
     setCurrentQIndex(0);
-    setScore(0);
     setSelectedAnswer(null);
-    setIsFinished(false);
+    setScore(0);
     setAnswers([]);
+    setIsFinished(false);
+    setIsSaving(false);
   };
 
   useEffect(() => {
@@ -203,12 +207,21 @@ function Quiz() {
               ✓ Đã lưu kết quả!
             </p>
           )}
-          <button
-            onClick={() => setSelectedQuizId(null)}
-            className="mt-4 bg-black text-white px-4 py-2 rounded-lg font-bold"
-          >
-            ← Chọn bài khác
-          </button>
+          <div className="flex gap-3 mt-4">
+            <button
+              onClick={() => startQuiz(quiz.id)}
+              className="bg-[#f5e6a8] border-2 border-black px-4 py-2 rounded-lg font-bold hover:bg-[#f0dd8a]"
+            >
+              🔄 Làm lại bài
+            </button>
+
+            <button
+              onClick={() => setSelectedQuizId(null)}
+              className="bg-black text-white px-4 py-2 rounded-lg font-bold hover:bg-stone-800"
+            >
+              ← Chọn bài khác
+            </button>
+          </div>
         </div>
 
         <div className="w-full mt-6 border-t pt-5">
