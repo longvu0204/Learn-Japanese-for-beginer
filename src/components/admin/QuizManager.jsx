@@ -412,61 +412,68 @@ function QuizManager() {
           </h3>
         </div>
 
-        {questions.map((q, qIndex) => (
-          <div
-            key={q.id}
-            className="bg-[#f5e6a8] border-2 border-black p-4 rounded-lg flex flex-col gap-3"
-          >
-            <div className="flex justify-between items-center">
-              <span className="text-stone-600 text-sm font-bold">
-                Câu {qIndex + 1}
-              </span>
-              {questions.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => removeQuestion(qIndex)}
-                  className="text-red-700 text-sm font-bold"
-                >
-                  Xóa câu này
-                </button>
-              )}
-            </div>
+        <div className="border-2 border-black rounded-xl bg-stone-50 p-3 max-h-[700px] overflow-y-auto">
+          <div className="flex flex-col gap-4">
+            {questions.map((q, qIndex) => (
+              <div
+                key={q.id}
+                className="bg-[#f5e6a8] border-2 border-black p-4 rounded-lg flex flex-col gap-3"
+              >
+                <div className="flex justify-between items-center">
+                  <span className="text-stone-600 text-sm font-bold">
+                    Câu {qIndex + 1}
+                  </span>
 
-            <input
-              type="text"
-              placeholder="Nội dung câu hỏi"
-              value={q.question}
-              onChange={(e) =>
-                updateQuestion(qIndex, "question", e.target.value)
-              }
-              className="p-2 rounded border-2 border-black"
-              required
-            />
+                  {questions.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeQuestion(qIndex)}
+                      className="text-red-700 text-sm font-bold"
+                    >
+                      Xóa câu này
+                    </button>
+                  )}
+                </div>
 
-            {q.options.map((opt, optIndex) => (
-              <input
-                key={optIndex}
-                type="text"
-                placeholder={`Đáp án ${optIndex + 1}`}
-                value={opt}
-                onChange={(e) => updateOption(qIndex, optIndex, e.target.value)}
-                className="p-2 rounded border-2 border-black"
-                required
-              />
+                <input
+                  type="text"
+                  placeholder="Nội dung câu hỏi"
+                  value={q.question}
+                  onChange={(e) =>
+                    updateQuestion(qIndex, "question", e.target.value)
+                  }
+                  className="p-2 rounded border-2 border-black"
+                  required
+                />
+
+                {q.options.map((opt, optIndex) => (
+                  <input
+                    key={optIndex}
+                    type="text"
+                    placeholder={`Đáp án ${optIndex + 1}`}
+                    value={opt}
+                    onChange={(e) =>
+                      updateOption(qIndex, optIndex, e.target.value)
+                    }
+                    className="p-2 rounded border-2 border-black"
+                    required
+                  />
+                ))}
+
+                <input
+                  type="text"
+                  placeholder="Đáp án đúng"
+                  value={q.correctAnswer}
+                  onChange={(e) =>
+                    updateQuestion(qIndex, "correctAnswer", e.target.value)
+                  }
+                  className="p-2 rounded border-2 border-black"
+                  required
+                />
+              </div>
             ))}
-
-            <input
-              type="text"
-              placeholder="Đáp án đúng (phải khớp chính xác 1 trong các đáp án trên)"
-              value={q.correctAnswer}
-              onChange={(e) =>
-                updateQuestion(qIndex, "correctAnswer", e.target.value)
-              }
-              className="p-2 rounded border-2 border-black"
-              required
-            />
           </div>
-        ))}
+        </div>
 
         <button
           type="button"
