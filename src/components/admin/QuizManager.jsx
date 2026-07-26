@@ -20,6 +20,7 @@ function QuizManager() {
   const { levels, customLevels, addLevel, deleteLevel } = useLevels();
 
   const [title, setTitle] = useState("");
+  const [searchQuestion, setSearchQuestion] = useState("");
   const [jlptLevel, setJlptLevel] = useState("N5");
   const [timeLimit, setTimeLimit] = useState(60);
   const [questions, setQuestions] = useState([
@@ -100,9 +101,6 @@ function QuizManager() {
     setQuestions(questions.filter((_, i) => i !== index));
   };
 
-  // Đọc file Excel, chuyển từng dòng thành 1 câu hỏi.
-  // Nếu đang SỬA 1 quiz có sẵn -> NỐI THÊM vào danh sách câu hỏi hiện tại.
-  // Nếu đang tạo quiz MỚI -> thay thế toàn bộ danh sách hiện tại như trước.
   const handleExcelImport = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -246,6 +244,10 @@ function QuizManager() {
       setMessage("Lỗi: " + err.message);
     }
   };
+
+  const filteredQuestions = questions.filter((q) =>
+    q.question.toLowerCase().includes(searchQuestion.toLowerCase()),
+  );
 
   return (
     <div className="max-w-2xl w-full min-w-0">
@@ -412,66 +414,81 @@ function QuizManager() {
           </h3>
         </div>
 
+        <div className="mb-3">
+          <input
+            type="text"
+            placeholder="🔍 Tìm theo nội dung câu hỏi..."
+            value={searchQuestion}
+            onChange={(e) => setSearchQuestion(e.target.value)}
+            className="w-full p-2 rounded-lg border-2 border-black"
+          />
+        </div>
+
         <div className="border-2 border-black rounded-xl bg-stone-50 p-3 max-h-[700px] overflow-y-auto">
           <div className="flex flex-col gap-4">
-            {questions.map((q, qIndex) => (
-              <div
-                key={q.id}
-                className="bg-[#f5e6a8] border-2 border-black p-4 rounded-lg flex flex-col gap-3"
-              >
-                <div className="flex justify-between items-center">
-                  <span className="text-stone-600 text-sm font-bold">
-                    Câu {qIndex + 1}
-                  </span>
+            {filteredQuestions.map((q) => {
+              // Lấy index của câu hỏi trong mảng gốc
+              const qIndex = questions.findIndex((item) => item.id === q.id);
 
-                  {questions.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeQuestion(qIndex)}
-                      className="text-red-700 text-sm font-bold"
-                    >
-                      Xóa câu này
-                    </button>
-                  )}
-                </div>
+              return (
+                <div
+                  key={q.id}
+                  className="bg-[#f5e6a8] border-2 border-black p-4 rounded-lg flex flex-col gap-3"
+                >
+                  <div className="flex justify-between items-center">
+                    <span className="text-stone-600 text-sm font-bold">
+                      Câu {qIndex + 1}
+                    </span>
 
-                <input
-                  type="text"
-                  placeholder="Nội dung câu hỏi"
-                  value={q.question}
-                  onChange={(e) =>
-                    updateQuestion(qIndex, "question", e.target.value)
-                  }
-                  className="p-2 rounded border-2 border-black"
-                  required
-                />
+                    {questions.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeQuestion(qIndex)}
+                        className="text-red-700 text-sm font-bold"
+                      >
+                        Xóa câu này
+                      </button>
+                    )}
+                  </div>
 
-                {q.options.map((opt, optIndex) => (
                   <input
-                    key={optIndex}
                     type="text"
-                    placeholder={`Đáp án ${optIndex + 1}`}
-                    value={opt}
+                    placeholder="Nội dung câu hỏi"
+                    value={q.question}
                     onChange={(e) =>
-                      updateOption(qIndex, optIndex, e.target.value)
+                      updateQuestion(qIndex, "question", e.target.value)
                     }
                     className="p-2 rounded border-2 border-black"
                     required
                   />
-                ))}
 
-                <input
-                  type="text"
-                  placeholder="Đáp án đúng"
-                  value={q.correctAnswer}
-                  onChange={(e) =>
-                    updateQuestion(qIndex, "correctAnswer", e.target.value)
-                  }
-                  className="p-2 rounded border-2 border-black"
-                  required
-                />
-              </div>
-            ))}
+                  {q.options.map((opt, optIndex) => (
+                    <input
+                      key={optIndex}
+                      type="text"
+                      placeholder={`Đáp án ${optIndex + 1}`}
+                      value={opt}
+                      onChange={(e) =>
+                        updateOption(qIndex, optIndex, e.target.value)
+                      }
+                      className="p-2 rounded border-2 border-black"
+                      required
+                    />
+                  ))}
+
+                  <input
+                    type="text"
+                    placeholder="Đáp án đúng"
+                    value={q.correctAnswer}
+                    onChange={(e) =>
+                      updateQuestion(qIndex, "correctAnswer", e.target.value)
+                    }
+                    className="p-2 rounded border-2 border-black"
+                    required
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
 
