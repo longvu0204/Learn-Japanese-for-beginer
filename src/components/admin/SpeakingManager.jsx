@@ -8,8 +8,9 @@ import {
   compressImageToBase64,
   estimateBase64Size,
 } from "../../utils/imageUtils";
+import { useLevels } from "../../hooks/useLevels";
+import AddLevelButton from "../../components/AddLevelButton";
 
-const LEVELS = ["JPD133", "N5", "N4", "N3", "N2", "N1"];
 const TYPES = [
   { value: "audio", label: "Câu hỏi bằng giọng nói" },
   { value: "image", label: "Câu hỏi bằng hình ảnh" },
@@ -36,6 +37,8 @@ function SpeakingManager() {
   const [uploading, setUploading] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
   const [imageSizeWarning, setImageSizeWarning] = useState("");
+  const { levels, addLevel } = useLevels();
+
   const [form, setForm] = useState({
     id: "",
     jlptLevel: "N5",
@@ -230,7 +233,7 @@ function SpeakingManager() {
             onChange={(e) => setForm({ ...form, jlptLevel: e.target.value })}
             className="p-2 rounded border-2 border-black bg-white"
           >
-            {LEVELS.map((l) => (
+            {levels.map((l) => (
               <option key={l} value={l}>
                 {l}
               </option>
@@ -368,7 +371,7 @@ function SpeakingManager() {
         >
           Tất cả ({items.length})
         </button>
-        {LEVELS.map((level) => {
+        {levels.map((level) => {
           const count = items.filter((i) => i.jlptLevel === level).length;
           return (
             <button

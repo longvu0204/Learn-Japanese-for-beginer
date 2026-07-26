@@ -4,8 +4,8 @@ import {
   deleteFlashcardDeck,
   getAllFlashcardDecks,
 } from "../../firebase/firestore";
-
-const LEVELS = ["N5", "N4", "N3", "N2", "N1"];
+import { useLevels } from "../../hooks/useLevels";
+import AddLevelButton from "../../components/AddLevelButton";
 
 function FlashcardManager() {
   const [decks, setDecks] = useState([]);
@@ -15,7 +15,7 @@ function FlashcardManager() {
   const [jlptLevel, setJlptLevel] = useState("N5");
   const [cards, setCards] = useState([{ id: "c1", front: "", back: "" }]);
   const [message, setMessage] = useState("");
-
+  const { levels, addLevel } = useLevels();
   const loadDecks = async () => {
     const data = await getAllFlashcardDecks();
     setDecks(data);
@@ -90,7 +90,7 @@ function FlashcardManager() {
             onChange={(e) => setJlptLevel(e.target.value)}
             className="p-2 rounded border-2 border-black bg-white"
           >
-            {LEVELS.map((l) => (
+            {levels.map((l) => (
               <option key={l} value={l}>
                 {l}
               </option>

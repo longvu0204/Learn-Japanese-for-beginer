@@ -5,8 +5,8 @@ import {
   getAllReading,
 } from "../../firebase/firestore";
 import { parsePassage } from "../../utils/furiganaParser";
-
-const LEVELS = ["JPD133", "N5", "N4", "N3", "N2", "N1"];
+import { useLevels } from "../../hooks/useLevels";
+import AddLevelButton from "../../components/AddLevelButton";
 
 function computeNextId(items) {
   let maxNum = 0;
@@ -21,6 +21,8 @@ function computeNextId(items) {
 }
 
 function ReadingManager() {
+  const { levels, addLevel } = useLevels();
+
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -191,7 +193,7 @@ function ReadingManager() {
             onChange={(e) => setForm({ ...form, jlptLevel: e.target.value })}
             className="p-2 rounded border-2 border-black bg-white"
           >
-            {LEVELS.map((l) => (
+            {levels.map((l) => (
               <option key={l} value={l}>
                 {l}
               </option>

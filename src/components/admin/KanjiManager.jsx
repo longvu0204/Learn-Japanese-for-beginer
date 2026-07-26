@@ -4,8 +4,8 @@ import {
   deleteKanjiChar,
   getAllKanji,
 } from "../../firebase/firestore";
-
-const LEVELS = ["N5", "N4", "N3", "N2", "N1"];
+import { useLevels } from "../../hooks/useLevels";
+import AddLevelButton from "../../components/AddLevelButton";
 
 // Tính ID tiếp theo dựa trên số lớn nhất đang có (vd: có k1..k9 -> trả về "k10")
 function computeNextId(items) {
@@ -25,6 +25,7 @@ function KanjiManager() {
   const [loading, setLoading] = useState(true);
   const [filterLevel, setFilterLevel] = useState("ALL");
   const [isEditing, setIsEditing] = useState(false);
+  const { levels, addLevel } = useLevels();
   const [form, setForm] = useState({
     id: "",
     char: "",
@@ -198,7 +199,7 @@ function KanjiManager() {
             onChange={(e) => setForm({ ...form, jlptLevel: e.target.value })}
             className="p-2 rounded border-2 border-black bg-white"
           >
-            {LEVELS.map((level) => (
+            {levels.map((level) => (
               <option key={level} value={level}>
                 {level}
               </option>
@@ -294,7 +295,7 @@ function KanjiManager() {
         >
           Tất cả ({items.length})
         </button>
-        {LEVELS.map((level) => {
+        {levels.map((level) => {
           const count = items.filter((i) => i.jlptLevel === level).length;
           return (
             <button

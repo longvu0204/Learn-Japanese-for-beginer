@@ -4,8 +4,8 @@ import {
   deleteListeningItem,
   getAllListening,
 } from "../../firebase/firestore";
-
-const LEVELS = ["N5", "N4", "N3", "N2", "N1"];
+import { useLevels } from "../../hooks/useLevels";
+import AddLevelButton from "../../components/AddLevelButton";
 
 function computeNextId(items) {
   let maxNum = 0;
@@ -23,6 +23,7 @@ function ListeningManager() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterLevel, setFilterLevel] = useState("ALL");
+  const { levels, addLevel } = useLevels();
   const [form, setForm] = useState({
     id: "",
     jlptLevel: "N5",
@@ -118,7 +119,7 @@ function ListeningManager() {
             onChange={(e) => setForm({ ...form, jlptLevel: e.target.value })}
             className="p-2 rounded border-2 border-black bg-white"
           >
-            {LEVELS.map((l) => (
+            {levels.map((l) => (
               <option key={l} value={l}>
                 {l}
               </option>
@@ -190,7 +191,7 @@ function ListeningManager() {
         >
           Tất cả ({items.length})
         </button>
-        {LEVELS.map((level) => {
+        {levels.map((level) => {
           const count = items.filter((i) => i.jlptLevel === level).length;
           return (
             <button
