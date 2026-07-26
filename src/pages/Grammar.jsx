@@ -10,8 +10,9 @@ import { useAuth } from "../context/AuthContext";
 import { useLevels } from "../hooks/useLevels";
 
 function Grammar() {
-  const { levels } = useAuth();
   const { currentUser } = useAuth();
+  const { levels } = useLevels();
+  const [selectedLevel, setSelectedLevel] = useState("N5");
   const [grammarList, setGrammarList] = useState([]);
   const [learned, setLearned] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -36,6 +37,17 @@ function Grammar() {
     loadData();
   }, [currentUser]);
 
+  // Lọc danh sách ngữ pháp theo cấp độ đang chọn
+  const filteredGrammarList = grammarList.filter(
+    (g) => g.jlptLevel === selectedLevel,
+  );
+
+  // Đổi cấp độ -> quay về mẫu câu đầu tiên của cấp độ đó
+  const handleSelectLevel = (level) => {
+    setSelectedLevel(level);
+    setSelectedIndex(0);
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -44,18 +56,63 @@ function Grammar() {
     );
   }
 
-  if (grammarList.length === 0) {
-    return (
-      <Layout>
-        <p className="text-stone-600">Chưa có dữ liệu ngữ pháp.</p>
-      </Layout>
-    );
-  }
+  return (
+    <Layout>
+      {/* Tabs chọn cấp độ */}
+      <div className="flex gap-2 mb-6 flex-wrap">
+        {levels.map((level) => (
+          <button
+            key={level}
+            onClick={() => handleSelectLevel(level)}
+            className={`px-4 py-2 rounded-lg font-bold border-2 border-black transition-colors ${
+              selectedLevel === level
+                ? "bg-black text-white"
+                : "bg-[#f5e6a8] text-stone-800 hover:bg-[#f0dd8a]"
+            }`}
+          >
+            {level}
+          </button>
+        ))}
+      </div>
 
-  const current = grammarList[selectedIndex];
+      {filteredGrammarList.length === 0 ? (
+        <p className="text-stone-600">
+          Chưa có dữ liệu ngữ pháp cho cấp độ {selectedLevel}.
+        </p>
+      ) : (
+        <GrammarContent
+          grammarList={filteredGrammarList}
+          selectedLevel={selectedLevel}
+          selectedIndex={selectedIndex}
+          setSelectedIndex={setSelectedIndex}
+          learned={learned}
+          setLearned={setLearned}
+          currentUser={currentUser}
+        />
+      )}
+    </Layout>
+  );
+}
+
+// Tách phần nội dung chính ra component riêng cho gọn, chỉ render khi đã có
+// danh sách ngữ pháp của cấp độ đang chọn
+function GrammarContent({
+  grammarList,
+  selectedLevel,
+  selectedIndex,
+  setSelectedIndex,
+  learned,
+  setLearned,
+  currentUser,
+}) {
+  // Đảm bảo index không vượt quá danh sách khi đổi cấp độ có ít mẫu câu hơn
+  const safeIndex = selectedIndex < grammarList.length ? selectedIndex : 0;
+  const current = grammarList[safeIndex];
   const isCurrentLearned = learned.includes(current.id);
   const progressPercent = Math.round(
-    (learned.length / grammarList.length) * 100,
+    (learned.filter((id) => grammarList.some((g) => g.id === id)).length /
+      grammarList.length) *
+      100,
   );
 
   const toggleLearned = async () => {
@@ -74,18 +131,20 @@ function Grammar() {
   };
 
   return (
-    <Layout>
+    <>
       <div className="mb-2 flex items-center justify-between">
         <div>
           <span className="inline-block bg-black text-white text-xs font-bold px-3 py-1 rounded-full">
-            Ngữ pháp N5
+            Ngữ pháp {selectedLevel}
           </span>
           <span className="ml-2 text-sm text-stone-500">
             {grammarList.length} mẫu câu
           </span>
         </div>
         <span className="text-sm font-bold text-stone-700">
-          Đã thuộc: {learned.length}/{grammarList.length} ({progressPercent}%)
+          Đã thuộc:{" "}
+          {learned.filter((id) => grammarList.some((g) => g.id === id)).length}/
+          {grammarList.length} ({progressPercent}%)
         </span>
       </div>
 
@@ -105,14 +164,14 @@ function Grammar() {
                 key={g.id}
                 onClick={() => setSelectedIndex(index)}
                 className={`text-left p-3 rounded-lg border-2 border-black transition-colors relative ${
-                  index === selectedIndex
+                  index === safeIndex
                     ? "bg-black text-white"
                     : "bg-[#f5e6a8] text-stone-900 hover:bg-[#f0dd8a]"
                 }`}
               >
                 <p className="font-bold">{g.title}</p>
                 <p
-                  className={`text-xs ${index === selectedIndex ? "text-stone-300" : "text-stone-600"}`}
+                  className={`text-xs ${index === safeIndex ? "text-stone-300" : "text-stone-600"}`}
                 >
                   {g.meaning}
                 </p>
@@ -168,7 +227,7 @@ function Grammar() {
           </button>
         </div>
       </div>
-    </Layout>
+    </>
   );
 }
 

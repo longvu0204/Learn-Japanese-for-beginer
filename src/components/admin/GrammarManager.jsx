@@ -7,6 +7,17 @@ import {
 import { useLevels } from "../../hooks/useLevels";
 import AddLevelButton from "../../components/AddLevelButton";
 
+// Tính ID tiếp theo dạng "g1", "g2", "g3"... dựa trên số lớn nhất đang có
+function getNextGrammarId(itemsList) {
+  const maxNumber = itemsList.reduce((max, item) => {
+    const match = /^g(\d+)$/.exec(item.id || "");
+    if (!match) return max;
+    const num = parseInt(match[1], 10);
+    return num > max ? num : max;
+  }, 0);
+  return `g${maxNumber + 1}`;
+}
+
 function GrammarManager() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,6 +37,8 @@ function GrammarManager() {
   const loadItems = async () => {
     const data = await getAllGrammar();
     setItems(data);
+    // Tự động điền sẵn ID tiếp theo mỗi khi danh sách được tải/cập nhật
+    setForm((prev) => ({ ...prev, id: getNextGrammarId(data) }));
     setLoading(false);
   };
 
@@ -53,7 +66,7 @@ function GrammarManager() {
       await addGrammarPoint({ ...form, examples });
       setMessage(`Đã thêm/cập nhật "${form.title}"`);
       setForm({
-        id: "",
+        id: "", // ID mới sẽ được tính lại ngay sau khi loadItems() chạy xong
         title: "",
         jlptLevel: form.jlptLevel,
         meaning: "",
@@ -61,7 +74,7 @@ function GrammarManager() {
         explanation: "",
       });
       setExamples([{ jp: "", reading: "", vi: "" }]);
-      loadItems();
+      await loadItems();
     } catch (err) {
       setMessage("Lỗi: " + err.message);
     }
@@ -70,7 +83,7 @@ function GrammarManager() {
   const handleDelete = async (id) => {
     if (!confirm(`Xóa mẫu ngữ pháp "${id}"?`)) return;
     await deleteGrammarPoint(id);
-    loadItems();
+    await loadItems();
   };
 
   const displayedItems =
@@ -89,13 +102,15 @@ function GrammarManager() {
         className="bg-[#f5e6a8] border-2 border-black rounded-xl p-5 mb-6 max-w-2xl"
       >
         <div className="grid grid-cols-2 gap-3 mb-3">
-          <input
-            placeholder="ID (vd: g4)"
-            value={form.id}
-            onChange={(e) => setForm({ ...form, id: e.target.value })}
-            className="p-2 rounded border-2 border-black"
-            required
-          />
+          <div>
+            <input
+              value={form.id}
+              readOnly
+              disabled
+              className="w-full p-2 rounded border-2 border-black bg-stone-200 text-stone-600 cursor-not-allowed"
+            />
+            <p className="text-xs text-stone-500 mt-1">ID tự động: {form.id}</p>
+          </div>
           <select
             value={form.jlptLevel}
             onChange={(e) => setForm({ ...form, jlptLevel: e.target.value })}
