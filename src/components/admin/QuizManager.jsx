@@ -16,8 +16,8 @@ function QuizManager() {
   // editingQuizId có giá trị nghĩa là đang SỬA quiz đã tồn tại
   const [editingQuizId, setEditingQuizId] = useState(null);
 
-  // Danh sách cấp độ dùng chung, có thể thêm mới ngay tại đây
-  const { levels, addLevel } = useLevels();
+  // Danh sách cấp độ dùng chung, có thể thêm/xóa ngay tại đây
+  const { levels, customLevels, addLevel, deleteLevel } = useLevels();
 
   const [title, setTitle] = useState("");
   const [jlptLevel, setJlptLevel] = useState("N5");
@@ -354,7 +354,11 @@ function QuizManager() {
                   </option>
                 ))}
               </select>
-              <AddLevelButton onAdd={addLevel} />
+              <AddLevelButton
+                customLevels={customLevels}
+                onAdd={addLevel}
+                onDelete={deleteLevel}
+              />
             </div>
           </div>
         </div>
