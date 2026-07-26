@@ -7,10 +7,10 @@ import {
   markAsNotLearned,
 } from "../firebase/firestore";
 import { useAuth } from "../context/AuthContext";
-
-const LEVELS = ["N5", "N4", "N3", "N2", "N1"];
+import { useLevels } from "../hooks/useLevels";
 
 function Kanji() {
+  const { levels } = useLevels();
   const { currentUser } = useAuth();
   const [allKanji, setAllKanji] = useState([]);
   const [learned, setLearned] = useState([]);
@@ -107,7 +107,7 @@ function Kanji() {
 
       {/* Tab chọn cấp độ N5-N1 */}
       <div className="flex flex-wrap gap-2 mb-4">
-        {LEVELS.map((level) => (
+        {levels.map((level) => (
           <button
             key={level}
             onClick={() => setSelectedLevel(level)}

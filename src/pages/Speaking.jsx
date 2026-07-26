@@ -6,7 +6,7 @@ import {
   getSpeakingHistory,
 } from "../firebase/firestore";
 import { useAuth } from "../context/AuthContext";
-const LEVELS = ["JPD133", "N5", "N4", "N3", "N2", "N1"];
+import { useLevels } from "../hooks/useLevels";
 
 function shuffleArray(arr) {
   const result = [...arr];
@@ -18,6 +18,7 @@ function shuffleArray(arr) {
 }
 
 function Speaking() {
+  const { levels } = useLevels();
   const { currentUser } = useAuth();
   const [allItems, setAllItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -402,7 +403,7 @@ function Speaking() {
 
       {/* Thanh chọn cấp độ - cho phép cuộn ngang trên mobile thay vì bóp méo/xuống dòng lộn xộn */}
       <div className="flex gap-2 mb-4 sm:mb-6 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
-        {LEVELS.map((level) => (
+        {levels.map((level) => (
           <button
             key={level}
             onClick={() => {

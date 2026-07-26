@@ -8,10 +8,10 @@ import {
   markAsNotLearned,
 } from "../firebase/firestore";
 import { useAuth } from "../context/AuthContext";
-
-const LEVELS = ["N5", "N4", "N3", "N2", "N1"];
+import { useLevels } from "../hooks/useLevels";
 
 function Flashcard() {
+  const { levels } = useLevels();
   const { currentUser } = useAuth();
   const [allDecks, setAllDecks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -66,7 +66,7 @@ function Flashcard() {
         </div>
 
         <div className="flex gap-2 mb-6">
-          {LEVELS.map((level) => (
+          {levels.map((level) => (
             <button
               key={level}
               onClick={() => setSelectedLevel(level)}

@@ -7,8 +7,10 @@ import {
   markAsNotLearned,
 } from "../firebase/firestore";
 import { useAuth } from "../context/AuthContext";
+import { useLevels } from "../hooks/useLevels";
 
 function Grammar() {
+  const { levels } = useAuth();
   const { currentUser } = useAuth();
   const [grammarList, setGrammarList] = useState([]);
   const [learned, setLearned] = useState([]);

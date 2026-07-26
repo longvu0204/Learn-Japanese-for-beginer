@@ -2,10 +2,10 @@ import { useState, useEffect, useRef } from "react";
 import Layout from "../components/Layout";
 import { getAllListening, saveQuizResult } from "../firebase/firestore";
 import { useAuth } from "../context/AuthContext";
-
-const LEVELS = ["N5", "N4", "N3", "N2", "N1"];
+import { useLevels } from "../hooks/useLevels";
 
 function Listening() {
+  const { levels } = useLevels();
   const { currentUser } = useAuth();
   const [allItems, setAllItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -123,7 +123,7 @@ function Listening() {
       </div>
 
       <div className="flex gap-2 mb-6">
-        {LEVELS.map((level) => (
+        {levels.map((level) => (
           <button
             key={level}
             onClick={() => {

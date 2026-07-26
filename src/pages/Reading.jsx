@@ -3,12 +3,13 @@ import Layout from "../components/Layout";
 import { getAllReading, saveReadingResult } from "../firebase/firestore";
 import { parsePassage } from "../utils/furiganaParser";
 import { useAuth } from "../context/AuthContext";
+import { useLevels } from "../hooks/useLevels";
 
-const LEVELS = ["JPD133", "N5", "N4", "N3", "N2", "N1"];
 const VOCAB_TOTAL_POINTS = 25;
 const COMPREHENSION_POINTS_PER_QUESTION = 10;
 
 function Reading() {
+  const { levels } = useLevels();
   const { currentUser } = useAuth();
   const [allPassages, setAllPassages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -142,7 +143,7 @@ function Reading() {
       </div>
 
       <div className="flex gap-2 mb-6 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
-        {LEVELS.map((level) => (
+        {levels.map((level) => (
           <button
             key={level}
             onClick={() => {
