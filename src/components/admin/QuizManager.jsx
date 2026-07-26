@@ -1,10 +1,24 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
-import { addQuiz } from "../../firebase/firestore";
+import { addQuiz, updateQuiz, getAllQuizzes } from "../../firebase/firestore";
+import { useLevels } from "../../hooks/useLevels";
+import AddLevelButton from "../../components/AddLevelButton";
 
-const LEVELS = ["CCM301", "N5", "N4", "N3", "N2", "N1"];
+const EMPTY_QUESTION = () => ({
+  id: `q${Date.now()}`,
+  question: "",
+  options: ["", "", "", ""],
+  correctAnswer: "",
+});
 
 function QuizManager() {
+  // editingQuizId = null nghĩa là đang tạo quiz MỚI
+  // editingQuizId có giá trị nghĩa là đang SỬA quiz đã tồn tại
+  const [editingQuizId, setEditingQuizId] = useState(null);
+
+  // Danh sách cấp độ dùng chung, có thể thêm mới ngay tại đây
+  const { levels, addLevel } = useLevels();
+
   const [title, setTitle] = useState("");
   const [jlptLevel, setJlptLevel] = useState("N5");
   const [timeLimit, setTimeLimit] = useState(60);
@@ -17,6 +31,52 @@ function QuizManager() {
   // Cấu hình ngân hàng câu hỏi random
   const [isRandomPool, setIsRandomPool] = useState(false);
   const [questionsPerAttempt, setQuestionsPerAttempt] = useState(60);
+
+  // Danh sách quiz đã tạo, để Admin xem lại / chọn sửa
+  const [quizList, setQuizList] = useState([]);
+  const [loadingList, setLoadingList] = useState(true);
+
+  const loadQuizList = () => {
+    setLoadingList(true);
+    getAllQuizzes()
+      .then((data) => {
+        setQuizList(data);
+        setLoadingList(false);
+      })
+      .catch(() => setLoadingList(false));
+  };
+
+  useEffect(() => {
+    loadQuizList();
+  }, []);
+
+  const resetForm = () => {
+    setEditingQuizId(null);
+    setTitle("");
+    setJlptLevel("N5");
+    setTimeLimit(60);
+    setQuestions([EMPTY_QUESTION()]);
+    setIsRandomPool(false);
+    setQuestionsPerAttempt(60);
+    setMessage("");
+    setImportError("");
+  };
+
+  // Bấm vào 1 quiz trong danh sách để load lại toàn bộ đề lên form và sửa
+  const handleSelectQuizToEdit = (q) => {
+    setEditingQuizId(q.id);
+    setTitle(q.title || "");
+    setJlptLevel(q.jlptLevel || "N5");
+    setTimeLimit(q.timeLimit || 60);
+    setQuestions(
+      q.questions && q.questions.length > 0 ? q.questions : [EMPTY_QUESTION()],
+    );
+    setIsRandomPool(!!q.isRandomPool);
+    setQuestionsPerAttempt(q.questionsPerAttempt || 60);
+    setMessage("");
+    setImportError("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const updateQuestion = (index, field, value) => {
     const updated = [...questions];
@@ -33,22 +93,16 @@ function QuizManager() {
   };
 
   const addQuestionField = () => {
-    setQuestions([
-      ...questions,
-      {
-        id: `q${questions.length + 1}`,
-        question: "",
-        options: ["", "", "", ""],
-        correctAnswer: "",
-      },
-    ]);
+    setQuestions([...questions, EMPTY_QUESTION()]);
   };
 
   const removeQuestion = (index) => {
     setQuestions(questions.filter((_, i) => i !== index));
   };
 
-  // Đọc file Excel, chuyển từng dòng thành 1 câu hỏi, thay thế toàn bộ danh sách câu hỏi hiện tại
+  // Đọc file Excel, chuyển từng dòng thành 1 câu hỏi.
+  // Nếu đang SỬA 1 quiz có sẵn -> NỐI THÊM vào danh sách câu hỏi hiện tại.
+  // Nếu đang tạo quiz MỚI -> thay thế toàn bộ danh sách hiện tại như trước.
   const handleExcelImport = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -106,7 +160,7 @@ function QuizManager() {
           }
 
           importedQuestions.push({
-            id: `q${importedQuestions.length + 1}`,
+            id: `imp${Date.now()}_${importedQuestions.length}`,
             question: questionText,
             options,
             correctAnswer,
@@ -118,22 +172,31 @@ function QuizManager() {
           return;
         }
 
-        setQuestions(importedQuestions);
+        // Đang sửa quiz có sẵn -> nối thêm vào cuối danh sách câu hỏi hiện tại
+        // Tạo mới -> thay thế toàn bộ như cũ
+        const isAppendMode = !!editingQuizId;
+        const finalQuestions = isAppendMode
+          ? [...questions, ...importedQuestions]
+          : importedQuestions;
 
-        // Nếu import từ 60 câu trở lên, gợi ý bật random pool để Admin không quên
-        if (importedQuestions.length > questionsPerAttempt) {
+        setQuestions(finalQuestions);
+
+        // Gợi ý bật random pool nếu tổng số câu vượt quá số câu random hiện tại
+        if (finalQuestions.length > questionsPerAttempt) {
           setIsRandomPool(true);
         }
 
+        const modeText = isAppendMode
+          ? `Đã NỐI THÊM ${importedQuestions.length} câu vào ngân hàng hiện có (tổng cộng ${finalQuestions.length} câu).`
+          : `Đã nhập thành công ${importedQuestions.length} câu hỏi từ Excel.`;
+
         if (errors.length > 0) {
           setImportError(
-            `Đã nhập ${importedQuestions.length} câu hợp lệ, bỏ qua ${errors.length} dòng lỗi: ${errors.join(" ")}`,
+            `${modeText} Bỏ qua ${errors.length} dòng lỗi: ${errors.join(" ")}`,
           );
         } else {
           setImportError("");
-          setMessage(
-            `Đã nhập thành công ${importedQuestions.length} câu hỏi từ Excel. Kiểm tra lại rồi bấm "Lưu Quiz".`,
-          );
+          setMessage(`${modeText} Kiểm tra lại rồi bấm "Lưu Quiz".`);
         }
       } catch (err) {
         console.error("Lỗi đọc file Excel:", err);
@@ -158,28 +221,27 @@ function QuizManager() {
       return;
     }
 
+    const quizData = {
+      title,
+      jlptLevel,
+      timeLimit: Number(timeLimit),
+      questions, // Toàn bộ ngân hàng câu hỏi
+      isRandomPool,
+      questionsPerAttempt: isRandomPool ? Number(questionsPerAttempt) : null,
+    };
+
     try {
-      await addQuiz({
-        title,
-        jlptLevel,
-        timeLimit: Number(timeLimit),
-        questions, // Lưu toàn bộ ngân hàng câu hỏi (vd. 197 câu)
-        isRandomPool,
-        questionsPerAttempt: isRandomPool ? Number(questionsPerAttempt) : null,
-      });
-      setMessage("Đã thêm quiz thành công!");
-      setTitle("");
-      setTimeLimit(60);
-      setQuestions([
-        {
-          id: "q1",
-          question: "",
-          options: ["", "", "", ""],
-          correctAnswer: "",
-        },
-      ]);
-      setIsRandomPool(false);
-      setQuestionsPerAttempt(60);
+      if (editingQuizId) {
+        // Đang sửa quiz có sẵn -> cập nhật lại đúng quiz đó, không tạo trùng
+        await updateQuiz(editingQuizId, quizData);
+        setMessage("Đã cập nhật quiz thành công!");
+      } else {
+        // Tạo quiz mới
+        await addQuiz(quizData);
+        setMessage("Đã thêm quiz thành công!");
+      }
+      loadQuizList();
+      resetForm();
     } catch (err) {
       setMessage("Lỗi: " + err.message);
     }
@@ -187,7 +249,61 @@ function QuizManager() {
 
   return (
     <div className="max-w-2xl w-full min-w-0">
-      <h2 className="text-xl font-bold text-stone-800 mb-4">Thêm Quiz mới</h2>
+      {/* Danh sách quiz đã tạo - bấm vào để xem lại / sửa */}
+      <div className="bg-white border-2 border-black rounded-xl p-4 mb-6">
+        <div className="flex justify-between items-center mb-2">
+          <h2 className="text-lg font-bold text-stone-800">
+            📋 Các quiz đã tạo
+          </h2>
+          {editingQuizId && (
+            <button
+              type="button"
+              onClick={resetForm}
+              className="text-sm font-bold text-blue-700 hover:underline"
+            >
+              + Tạo quiz mới
+            </button>
+          )}
+        </div>
+
+        {loadingList ? (
+          <p className="text-sm text-stone-500">Đang tải danh sách...</p>
+        ) : quizList.length === 0 ? (
+          <p className="text-sm text-stone-500">Chưa có quiz nào.</p>
+        ) : (
+          <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
+            {quizList.map((q) => (
+              <button
+                key={q.id}
+                type="button"
+                onClick={() => handleSelectQuizToEdit(q)}
+                className={`text-left p-2 rounded-lg border-2 hover:bg-stone-100 ${
+                  editingQuizId === q.id
+                    ? "border-blue-600 bg-blue-50"
+                    : "border-black"
+                }`}
+              >
+                <p className="font-bold text-stone-900">
+                  {q.title}{" "}
+                  <span className="text-xs font-normal text-stone-500">
+                    ({q.jlptLevel})
+                  </span>
+                </p>
+                <p className="text-xs text-stone-600">
+                  {q.isRandomPool && q.questionsPerAttempt
+                    ? `${q.questionsPerAttempt}/${q.questions?.length || 0} câu (random)`
+                    : `${q.questions?.length || 0} câu`}{" "}
+                  · {q.timeLimit}s
+                </p>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <h2 className="text-xl font-bold text-stone-800 mb-4">
+        {editingQuizId ? "✏️ Đang sửa quiz" : "Thêm Quiz mới"}
+      </h2>
 
       {/* Khu vực nhập từ Excel - đặt trên cùng để Admin thấy ngay */}
       <div className="bg-blue-50 border-2 border-blue-400 rounded-xl p-4 mb-4">
@@ -197,7 +313,9 @@ function QuizManager() {
         <p className="text-xs text-stone-600 mb-2">
           File cần đúng 6 cột theo thứ tự:{" "}
           <b>Question, Option1, Option2, Option3, Option4, CorrectAnswer</b>.
-          Import sẽ THAY THẾ toàn bộ danh sách câu hỏi hiện tại bên dưới.
+          {editingQuizId
+            ? " Đang sửa quiz có sẵn nên import sẽ NỐI THÊM vào ngân hàng câu hỏi hiện có."
+            : " Import sẽ THAY THẾ toàn bộ danh sách câu hỏi hiện tại bên dưới."}
         </p>
         <input
           type="file"
@@ -224,17 +342,20 @@ function QuizManager() {
           </div>
           <div>
             <label className="text-stone-600 text-sm">Cấp độ</label>
-            <select
-              value={jlptLevel}
-              onChange={(e) => setJlptLevel(e.target.value)}
-              className="w-full p-2 rounded border-2 border-black mt-1 bg-white"
-            >
-              {LEVELS.map((l) => (
-                <option key={l} value={l}>
-                  {l}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center gap-2 mt-1">
+              <select
+                value={jlptLevel}
+                onChange={(e) => setJlptLevel(e.target.value)}
+                className="flex-1 p-2 rounded border-2 border-black bg-white"
+              >
+                {levels.map((l) => (
+                  <option key={l} value={l}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+              <AddLevelButton onAdd={addLevel} />
+            </div>
           </div>
         </div>
 
@@ -355,7 +476,7 @@ function QuizManager() {
           type="submit"
           className="bg-black text-white p-3 rounded-lg font-bold hover:bg-stone-800 mt-2"
         >
-          Lưu Quiz
+          {editingQuizId ? "Cập nhật Quiz" : "Lưu Quiz"}
         </button>
 
         {message && (

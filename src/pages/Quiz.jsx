@@ -6,8 +6,7 @@ import {
   getQuizHistory,
 } from "../firebase/firestore";
 import { useAuth } from "../context/AuthContext";
-
-const LEVELS = ["CCM301", "N5", "N4", "N3", "N2", "N1"];
+import { useLevels } from "../hooks/useLevels";
 
 // Xáo trộn mảng bằng thuật toán Fisher-Yates - đảm bảo random đều, không lệch
 function shuffleArray(array) {
@@ -37,6 +36,7 @@ function pickQuestionsForAttempt(targetQuiz) {
 
 function Quiz() {
   const { currentUser } = useAuth();
+  const { levels } = useLevels();
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedLevel, setSelectedLevel] = useState("N5");
@@ -184,7 +184,7 @@ function Quiz() {
         </h1>
 
         <div className="flex gap-2 mb-6">
-          {LEVELS.map((level) => (
+          {levels.map((level) => (
             <button
               key={level}
               onClick={() => setSelectedLevel(level)}

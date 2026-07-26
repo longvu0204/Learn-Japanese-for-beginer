@@ -88,14 +88,44 @@ export const getAllQuizzes = async () => {
   return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 };
 
+// Thêm 1 quiz mới (dùng cho Admin)
+export const addQuiz = async (quizData) => {
+  await addDoc(collection(db, "quizzes"), quizData);
+};
+
+// Cập nhật lại 1 quiz đã tồn tại (dùng khi Admin sửa hoặc nối thêm câu hỏi vào ngân hàng cũ)
+export const updateQuiz = async (quizId, quizData) => {
+  const quizRef = doc(db, "quizzes", quizId);
+  await updateDoc(quizRef, quizData);
+};
+
+// Xóa 1 quiz
+export const deleteQuiz = async (quizId) => {
+  await deleteDoc(doc(db, "quizzes", quizId));
+};
+
 // Thêm 1 bộ flashcard mới (dùng cho Admin)
 export const addFlashcardDeck = async (deckData) => {
   await addDoc(collection(db, "flashcardDecks"), deckData);
 };
 
-// Thêm 1 quiz mới (dùng cho Admin)
-export const addQuiz = async (quizData) => {
-  await addDoc(collection(db, "quizzes"), quizData);
+// ==== Quản lý danh sách CẤP ĐỘ dùng chung cho toàn bộ Manager ====
+// (quiz, flashcard, kanji, listening, speaking, reading...) đều đọc từ đây
+
+// Lấy danh sách các cấp độ do Admin tự thêm (ngoài các cấp độ mặc định)
+export const getAllLevels = async () => {
+  const snapshot = await getDocs(collection(db, "levels"));
+  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+};
+
+// Thêm 1 cấp độ mới, dùng chung cho mọi Manager
+export const addLevel = async (levelName) => {
+  await addDoc(collection(db, "levels"), { name: levelName });
+};
+
+// Xóa 1 cấp độ (chỉ xóa được cấp độ do Admin tự thêm, không xóa được cấp độ mặc định)
+export const deleteLevel = async (levelId) => {
+  await deleteDoc(doc(db, "levels", levelId));
 };
 
 export const completeOnboarding = async (uid, initialLevel, learningGoal) => {
