@@ -191,9 +191,9 @@ function Katakana() {
 
       <h1 className="text-2xl font-bold text-stone-800 mb-6">Katakana</h1>
 
-      {/* Cấu trúc responsive layout: flex-col trên Mobile, flex-row trên Desktop XL */}
+      {/* Cấu trúc responsive layout: flex-col trên Mobile, flex-row (3 cột ngang hàng) từ XL trở lên */}
       <div className="flex flex-col xl:flex-row gap-6 xl:gap-10 items-start overflow-x-auto w-full">
-        {/* ================= PHẦN TRÁI: ÂM CƠ BẢN ================= */}
+        {/* ================= CỘT 1: ÂM CƠ BẢN ================= */}
         <div className="w-full xl:w-auto bg-white/50 p-4 md:p-6 rounded-2xl shadow-sm border border-stone-200/60">
           <p className="text-base font-bold text-stone-700 mb-4 border-b border-stone-200 pb-2">
             Âm cơ bản (Seion)
@@ -205,30 +205,27 @@ function Katakana() {
           </div>
         </div>
 
-        {/* ================= PHẦN PHẢI: BIẾN ÂM & ÂM GHÉP ================= */}
-        <div className="flex flex-col gap-6 md:gap-8 w-full xl:w-auto">
-          {/* Biến âm */}
-          <div className="bg-white/50 p-4 md:p-6 rounded-2xl shadow-sm border border-stone-200/60">
-            <p className="text-base font-bold text-stone-700 mb-4 border-b border-stone-200 pb-2">
-              Biến âm (Dakuten)
-            </p>
-            <div className="grid grid-cols-5 gap-y-2.5 gap-x-1.5 md:gap-y-3 md:gap-x-2 justify-items-center w-full">
-              {DAKUTEN_ROWS.flat().map((id, index) => (
-                <CharCell key={`dakuten-${index}`} id={id} />
-              ))}
-            </div>
+        {/* ================= CỘT 2: BIẾN ÂM ================= */}
+        <div className="w-full xl:w-auto bg-white/50 p-4 md:p-6 rounded-2xl shadow-sm border border-stone-200/60">
+          <p className="text-base font-bold text-stone-700 mb-4 border-b border-stone-200 pb-2">
+            Biến âm (Dakuten)
+          </p>
+          <div className="grid grid-cols-5 gap-y-2.5 gap-x-1.5 md:gap-y-3 md:gap-x-2 justify-items-center w-full">
+            {DAKUTEN_ROWS.flat().map((id, index) => (
+              <CharCell key={`dakuten-${index}`} id={id} />
+            ))}
           </div>
+        </div>
 
-          {/* Âm ghép */}
-          <div className="bg-white/50 p-4 md:p-6 rounded-2xl shadow-sm border border-stone-200/60">
-            <p className="text-base font-bold text-stone-700 mb-4 border-b border-stone-200 pb-2">
-              Âm ghép (Yoon)
-            </p>
-            <div className="grid grid-cols-3 gap-y-2.5 gap-x-1.5 md:gap-y-3 md:gap-x-2 justify-items-center w-full max-w-md mx-auto">
-              {YOON_ROWS.flat().map((id, index) => (
-                <CharCell key={`yoon-${index}`} id={id} />
-              ))}
-            </div>
+        {/* ================= CỘT 3: ÂM GHÉP ================= */}
+        <div className="w-full xl:w-auto bg-white/50 p-4 md:p-6 rounded-2xl shadow-sm border border-stone-200/60">
+          <p className="text-base font-bold text-stone-700 mb-4 border-b border-stone-200 pb-2">
+            Âm ghép (Yoon)
+          </p>
+          <div className="grid grid-cols-3 gap-y-2.5 gap-x-1.5 md:gap-y-3 md:gap-x-2 justify-items-center w-full">
+            {YOON_ROWS.flat().map((id, index) => (
+              <CharCell key={`yoon-${index}`} id={id} />
+            ))}
           </div>
         </div>
       </div>
