@@ -7,7 +7,7 @@ import {
 } from "../firebase/firestore";
 import { useAuth } from "../context/AuthContext";
 
-const LEVELS = ["N5", "N4", "N3", "N2", "N1"];
+const LEVELS = ["CCM301", "N5", "N4", "N3", "N2", "N1"];
 
 function Quiz() {
   const { currentUser } = useAuth();

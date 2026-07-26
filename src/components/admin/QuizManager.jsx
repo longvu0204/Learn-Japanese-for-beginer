@@ -87,6 +87,7 @@ function QuizManager() {
             onChange={(e) => setJlptLevel(e.target.value)}
             className="w-full p-2 rounded border-2 border-black mt-1 bg-white"
           >
+            <option value="CCM301">CCM301</option>
             <option value="N5">N5</option>
             <option value="N4">N4</option>
             <option value="N3">N3</option>
