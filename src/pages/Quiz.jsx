@@ -9,12 +9,39 @@ import { useAuth } from "../context/AuthContext";
 
 const LEVELS = ["CCM301", "N5", "N4", "N3", "N2", "N1"];
 
+// Xáo trộn mảng bằng thuật toán Fisher-Yates - đảm bảo random đều, không lệch
+function shuffleArray(array) {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// Nếu quiz là ngân hàng câu hỏi (isRandomPool), lấy ngẫu nhiên questionsPerAttempt câu
+// Nếu không, dùng nguyên danh sách câu hỏi của quiz
+function pickQuestionsForAttempt(targetQuiz) {
+  if (
+    targetQuiz.isRandomPool &&
+    targetQuiz.questionsPerAttempt &&
+    targetQuiz.questionsPerAttempt < targetQuiz.questions.length
+  ) {
+    return shuffleArray(targetQuiz.questions).slice(
+      0,
+      targetQuiz.questionsPerAttempt,
+    );
+  }
+  return targetQuiz.questions;
+}
+
 function Quiz() {
   const { currentUser } = useAuth();
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedLevel, setSelectedLevel] = useState("N5");
   const [selectedQuizId, setSelectedQuizId] = useState(null);
+  const [activeQuestions, setActiveQuestions] = useState([]);
   const [history, setHistory] = useState([]);
   const [currentQIndex, setCurrentQIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
@@ -37,14 +64,18 @@ function Quiz() {
 
   const quizzesInLevel = quizzes.filter((q) => q.jlptLevel === selectedLevel);
   const quiz = quizzes.find((q) => q.id === selectedQuizId);
-  const currentQuestion = quiz?.questions[currentQIndex];
+  const currentQuestion = activeQuestions[currentQIndex];
 
   const startQuiz = (quizId) => {
     const target = quizzes.find((q) => q.id === quizId);
 
     clearInterval(intervalRef.current);
 
+    // Mỗi lần bắt đầu bài, random lại bộ câu hỏi nếu quiz là ngân hàng câu hỏi
+    const pickedQuestions = pickQuestionsForAttempt(target);
+
     setSelectedQuizId(quizId);
+    setActiveQuestions(pickedQuestions);
     setTimeLeft(target.timeLimit);
     setCurrentQIndex(0);
     setSelectedAnswer(null);
@@ -77,7 +108,7 @@ function Quiz() {
         currentUser.uid,
         quiz.id,
         score,
-        quiz.questions.length,
+        activeQuestions.length,
         timeSpent,
         answers,
       )
@@ -116,7 +147,7 @@ function Quiz() {
     }
 
     setTimeout(() => {
-      if (currentQIndex + 1 < quiz.questions.length) {
+      if (currentQIndex + 1 < activeQuestions.length) {
         setCurrentQIndex((prev) => prev + 1);
         setSelectedAnswer(null);
       } else {
@@ -182,7 +213,9 @@ function Quiz() {
               >
                 <p className="font-bold text-stone-900 mb-1">{q.title}</p>
                 <p className="text-sm text-stone-600">
-                  {q.questions.length} câu hỏi · {q.timeLimit}s
+                  {q.isRandomPool && q.questionsPerAttempt
+                    ? `${q.questionsPerAttempt}/${q.questions.length} câu hỏi (random) · ${q.timeLimit}s`
+                    : `${q.questions.length} câu hỏi · ${q.timeLimit}s`}
                 </p>
               </button>
             ))}
@@ -198,7 +231,7 @@ function Quiz() {
         <div className="max-w-lg mx-auto bg-[#f5e6a8] border-2 border-black rounded-xl p-8 flex flex-col items-center gap-3 mt-12">
           <h1 className="text-2xl font-bold text-stone-800">Kết quả</h1>
           <p className="text-3xl font-bold text-stone-900">
-            {score} / {quiz.questions.length}
+            {score} / {activeQuestions.length}
           </p>
           {isSaving ? (
             <p className="text-stone-500 text-sm">Đang lưu kết quả...</p>
@@ -323,7 +356,7 @@ function Quiz() {
       <div className="max-w-lg mx-auto">
         <div className="flex justify-between items-center mb-4">
           <span className="inline-block bg-black text-white text-xs font-bold px-3 py-1 rounded-full">
-            Câu {currentQIndex + 1} / {quiz.questions.length}
+            Câu {currentQIndex + 1} / {activeQuestions.length}
           </span>
           <span
             className={`text-sm font-bold px-3 py-1 rounded-full border-2 border-black ${
