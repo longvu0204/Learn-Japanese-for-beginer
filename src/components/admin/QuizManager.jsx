@@ -1,6 +1,11 @@
 import { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
-import { addQuiz, updateQuiz, getAllQuizzes } from "../../firebase/firestore";
+import {
+  addQuiz,
+  updateQuiz,
+  deleteQuiz,
+  getAllQuizzes,
+} from "../../firebase/firestore";
 import { useLevels } from "../../hooks/useLevels";
 import AddLevelButton from "../../components/AddLevelButton";
 
@@ -36,6 +41,7 @@ function QuizManager() {
   // Danh sách quiz đã tạo, để Admin xem lại / chọn sửa
   const [quizList, setQuizList] = useState([]);
   const [loadingList, setLoadingList] = useState(true);
+  const [deletingId, setDeletingId] = useState(null);
 
   const loadQuizList = () => {
     setLoadingList(true);
@@ -77,6 +83,26 @@ function QuizManager() {
     setMessage("");
     setImportError("");
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // Xóa 1 quiz khỏi danh sách - nếu đang sửa đúng quiz đó thì reset form về trạng thái tạo mới
+  const handleDeleteQuiz = async (e, quizId, quizTitle) => {
+    e.stopPropagation(); // tránh kích hoạt handleSelectQuizToEdit khi bấm nút xóa
+    if (!confirm(`Xóa quiz "${quizTitle}"? Hành động này không thể hoàn tác.`))
+      return;
+
+    setDeletingId(quizId);
+    try {
+      await deleteQuiz(quizId);
+      if (editingQuizId === quizId) {
+        resetForm();
+      }
+      loadQuizList();
+    } catch (err) {
+      setMessage("Lỗi khi xóa: " + err.message);
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const updateQuestion = (index, field, value) => {
@@ -275,29 +301,40 @@ function QuizManager() {
         ) : (
           <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
             {quizList.map((q) => (
-              <button
+              <div
                 key={q.id}
-                type="button"
                 onClick={() => handleSelectQuizToEdit(q)}
-                className={`text-left p-2 rounded-lg border-2 hover:bg-stone-100 ${
+                className={`relative flex items-center justify-between gap-2 text-left p-2 rounded-lg border-2 cursor-pointer hover:bg-stone-100 ${
                   editingQuizId === q.id
                     ? "border-blue-600 bg-blue-50"
                     : "border-black"
                 }`}
               >
-                <p className="font-bold text-stone-900">
-                  {q.title}{" "}
-                  <span className="text-xs font-normal text-stone-500">
-                    ({q.jlptLevel})
-                  </span>
-                </p>
-                <p className="text-xs text-stone-600">
-                  {q.isRandomPool && q.questionsPerAttempt
-                    ? `${q.questionsPerAttempt}/${q.questions?.length || 0} câu (random)`
-                    : `${q.questions?.length || 0} câu`}{" "}
-                  · {q.timeLimit}s
-                </p>
-              </button>
+                <div className="min-w-0">
+                  <p className="font-bold text-stone-900 truncate">
+                    {q.title}{" "}
+                    <span className="text-xs font-normal text-stone-500">
+                      ({q.jlptLevel})
+                    </span>
+                  </p>
+                  <p className="text-xs text-stone-600">
+                    {q.isRandomPool && q.questionsPerAttempt
+                      ? `${q.questionsPerAttempt}/${q.questions?.length || 0} câu (random)`
+                      : `${q.questions?.length || 0} câu`}{" "}
+                    · {q.timeLimit}s
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={(e) => handleDeleteQuiz(e, q.id, q.title)}
+                  disabled={deletingId === q.id}
+                  title="Xóa quiz này"
+                  className="flex-shrink-0 w-7 h-7 rounded-full bg-red-600 text-white font-bold text-sm hover:bg-red-700 disabled:opacity-50"
+                >
+                  {deletingId === q.id ? "…" : "✕"}
+                </button>
+              </div>
             ))}
           </div>
         )}
