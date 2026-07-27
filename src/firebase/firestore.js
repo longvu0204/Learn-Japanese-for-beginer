@@ -229,6 +229,14 @@ export const setFlashcardDeck = async (deckData) => {
   await setDoc(doc(db, "flashcardDecks", id), data);
 };
 
+// Tải ảnh minh họa cho 1 thẻ flashcard lên Firebase Storage, trả về URL công khai
+export const uploadCardImage = async (file, deckId, cardId) => {
+  const path = `flashcards/${deckId}/${cardId}-${Date.now()}-${file.name}`;
+  const storageRef = ref(storage, path);
+  await uploadBytes(storageRef, file);
+  return await getDownloadURL(storageRef);
+};
+
 export const getAllListening = async () => {
   const snapshot = await getDocs(collection(db, "listening"));
   return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
