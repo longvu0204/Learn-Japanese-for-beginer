@@ -393,7 +393,9 @@ function Quiz() {
       </Layout>
     );
   }
-
+  console.log("Question:", currentQuestion.question);
+  console.log("Options:", currentQuestion.options);
+  console.log("Length:", currentQuestion.options.length);
   return (
     <Layout>
       <div className="max-w-lg mx-auto">
@@ -422,9 +424,9 @@ function Quiz() {
         </div>
 
         <div className="flex flex-col gap-3 mb-5">
-          {currentQuestion.options.map((option) => (
+          {currentQuestion.options.map((option, index) => (
             <button
-              key={option}
+              key={`${currentQIndex}-${index}`}
               onClick={() => handleSelectOption(option)}
               className={`p-3 rounded-lg font-medium transition-colors ${getOptionStyle(option)}`}
             >
