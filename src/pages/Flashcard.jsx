@@ -9,6 +9,7 @@ import {
 } from "../firebase/firestore";
 import { useAuth } from "../context/AuthContext";
 import { useLevels } from "../hooks/useLevels";
+import FlashcardGame from "../components/FlashcardGame";
 
 // Xáo trộn mảng bằng thuật toán Fisher-Yates
 function shuffleArray(array) {
@@ -55,6 +56,7 @@ function Flashcard() {
   const [selectedLevel, setSelectedLevel] = useState("N5");
   const [selectedDeckId, setSelectedDeckId] = useState(null);
   const [learned, setLearned] = useState([]);
+  const [showGame, setShowGame] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   // Thứ tự học hiện tại (mảng index của deck.cards) - dùng để xáo trộn
@@ -342,6 +344,12 @@ function Flashcard() {
         >
           {resetting ? "Đang xóa..." : "↺ Reset tiến độ"}
         </button>
+        <button
+          onClick={() => setShowGame(true)}
+          className="bg-[#f5e6a8] border-2 border-black px-4 py-2 rounded-lg font-bold hover:bg-[#f0dd8a]"
+        >
+          🎮 Ôn tập (Trò chơi ghép thẻ)
+        </button>
       </div>
 
       <h1 className="text-2xl font-bold text-stone-800 mb-1 font-serif">
@@ -440,6 +448,24 @@ function Flashcard() {
             </p>
           </div>
         </>
+      )}
+
+      {showGame && (
+        <FlashcardGame
+          deck={deck}
+          learnedIds={learned}
+          onMarkLearned={(cardId) => {
+            // Gọi đúng hàm đánh dấu đã thuộc hiện có trong file của bạn, ví dụ:
+            markAsLearned(
+              currentUser.uid,
+              progressType,
+              cardId,
+              deck.cards.length,
+            );
+            setLearned((prev) => [...prev, cardId]);
+          }}
+          onClose={() => setShowGame(false)}
+        />
       )}
     </Layout>
   );
