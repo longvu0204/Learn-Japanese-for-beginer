@@ -16,6 +16,10 @@ const EMPTY_QUESTION = () => ({
   correctAnswerIndexes: [], // mảng vị trí (index) các đáp án đúng - hỗ trợ chọn nhiều
 });
 
+// Số đáp án tối thiểu cho 1 câu hỏi - không giới hạn số tối đa,
+// admin có thể bấm "+ Thêm đáp án" thêm bao nhiêu tùy ý (3, 5, 6, ...)
+const MIN_OPTIONS = 2;
+
 // Với dữ liệu quiz cũ chỉ có field "correctAnswer" (1 chuỗi text), tự động
 // chuyển sang correctAnswerIndexes để tương thích ngược khi mở sửa lại
 function migrateQuestion(q) {
@@ -133,6 +137,36 @@ function QuizManager() {
     updateQuestion(qIndex, "correctAnswerIndexes", updated);
   };
 
+  // Thêm 1 ô đáp án mới cho 1 câu hỏi (không giới hạn số lượng - 3, 5, 6... tùy ý)
+  const addOptionField = (qIndex) => {
+    const updated = [...questions];
+    updated[qIndex] = {
+      ...updated[qIndex],
+      options: [...updated[qIndex].options, ""],
+    };
+    setQuestions(updated);
+  };
+
+  // Xóa 1 ô đáp án khỏi câu hỏi - đồng thời cập nhật lại correctAnswerIndexes
+  // (bỏ index bị xóa, dịch các index phía sau lùi lại 1) để không bị lệch đáp án đúng
+  const removeOptionField = (qIndex, optIndex) => {
+    const updated = [...questions];
+    const q = updated[qIndex];
+    if (q.options.length <= MIN_OPTIONS) return;
+
+    const newOptions = q.options.filter((_, i) => i !== optIndex);
+    const newCorrectIndexes = (q.correctAnswerIndexes || [])
+      .filter((i) => i !== optIndex)
+      .map((i) => (i > optIndex ? i - 1 : i));
+
+    updated[qIndex] = {
+      ...q,
+      options: newOptions,
+      correctAnswerIndexes: newCorrectIndexes,
+    };
+    setQuestions(updated);
+  };
+
   const updateOption = (qIndex, optIndex, value) => {
     const updated = [...questions];
     const newOptions = [...updated[qIndex].options];
@@ -174,30 +208,34 @@ function QuizManager() {
         const importedQuestions = [];
         const errors = [];
 
+        // Số đáp án linh hoạt: đọc động các cột Option1, Option2, ... Option10,
+        // câu nào ít đáp án hơn thì cứ để trống các cột Option thừa trong file
+        const MAX_OPTION_COLUMNS = 10;
+
         rows.forEach((row, index) => {
           const rowNum = index + 2; // +2 vì dòng 1 là tiêu đề, Excel đếm từ dòng 1
 
           const questionText = String(row["Question"] || "").trim();
-          const option1 = String(row["Option1"] || "").trim();
-          const option2 = String(row["Option2"] || "").trim();
-          const option3 = String(row["Option3"] || "").trim();
-          const option4 = String(row["Option4"] || "").trim();
+
+          const options = [];
+          for (let i = 1; i <= MAX_OPTION_COLUMNS; i++) {
+            const val = String(row[`Option${i}`] || "").trim();
+            if (val) options.push(val);
+          }
+
           const correctAnswerRaw = String(row["CorrectAnswer"] || "").trim();
 
           // Kiểm tra dữ liệu hợp lệ trước khi thêm - báo rõ dòng nào lỗi để Admin dễ sửa file
           if (
             !questionText ||
-            !option1 ||
-            !option2 ||
-            !option3 ||
-            !option4 ||
+            options.length < MIN_OPTIONS ||
             !correctAnswerRaw
           ) {
-            errors.push(`Dòng ${rowNum}: thiếu dữ liệu (cần đủ 6 cột).`);
+            errors.push(
+              `Dòng ${rowNum}: thiếu dữ liệu (cần Question, tối thiểu ${MIN_OPTIONS} đáp án, và CorrectAnswer).`,
+            );
             return;
           }
-
-          const options = [option1, option2, option3, option4];
 
           // Cho phép nhiều đáp án đúng, cách nhau bằng dấu ";" (vd: "Đáp án A;Đáp án C")
           const correctTexts = correctAnswerRaw
@@ -213,7 +251,7 @@ function QuizManager() {
             correctAnswerIndexes.length !== correctTexts.length
           ) {
             errors.push(
-              `Dòng ${rowNum}: "CorrectAnswer" không khớp với 4 đáp án đã cho (nhiều đáp án đúng cách nhau bằng dấu ";").`,
+              `Dòng ${rowNum}: "CorrectAnswer" không khớp với các đáp án đã cho (nhiều đáp án đúng cách nhau bằng dấu ";").`,
             );
             return;
           }
@@ -396,10 +434,11 @@ function QuizManager() {
           📥 Nhập câu hỏi từ Excel
         </p>
         <p className="text-xs text-stone-600 mb-2">
-          File cần đúng 6 cột theo thứ tự:{" "}
-          <b>Question, Option1, Option2, Option3, Option4, CorrectAnswer</b>.
-          Nếu câu có nhiều đáp án đúng, ghi cách nhau bằng dấu <b>;</b> trong
-          cột CorrectAnswer (vd: <b>Đáp án A;Đáp án C</b>).
+          Cột bắt buộc: <b>Question</b>, ít nhất 2 cột <b>Option...</b>{" "}
+          (Option1, Option2, Option3... tối đa 10, câu nào ít đáp án hơn thì để
+          trống cột Option thừa), và <b>CorrectAnswer</b>. Nếu câu có nhiều đáp
+          án đúng, ghi cách nhau bằng dấu <b>;</b> trong cột CorrectAnswer (vd:{" "}
+          <b>Đáp án A;Đáp án C</b>).
           {editingQuizId
             ? " Đang sửa quiz có sẵn nên import sẽ NỐI THÊM vào ngân hàng câu hỏi hiện có."
             : " Import sẽ THAY THẾ toàn bộ danh sách câu hỏi hiện tại bên dưới."}
@@ -578,9 +617,27 @@ function QuizManager() {
                           }`}
                           required
                         />
+                        {q.options.length > MIN_OPTIONS && (
+                          <button
+                            type="button"
+                            onClick={() => removeOptionField(qIndex, optIndex)}
+                            title="Xóa đáp án này"
+                            className="flex-shrink-0 w-8 h-8 rounded-lg border-2 border-black text-red-700 font-bold hover:bg-red-50"
+                          >
+                            ✕
+                          </button>
+                        )}
                       </div>
                     );
                   })}
+
+                  <button
+                    type="button"
+                    onClick={() => addOptionField(qIndex)}
+                    className="self-start text-sm font-bold text-blue-700 hover:underline"
+                  >
+                    + Thêm đáp án
+                  </button>
                 </div>
               );
             })}
