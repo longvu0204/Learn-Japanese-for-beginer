@@ -20,6 +20,40 @@ const EMPTY_QUESTION = () => ({
 // admin có thể bấm "+ Thêm đáp án" thêm bao nhiêu tùy ý (3, 5, 6, ...)
 const MIN_OPTIONS = 2;
 
+// Chuẩn hóa text trước khi so khớp CorrectAnswer với Option: gộp khoảng trắng
+// thừa, đổi dấu cách "không ngắt dòng" (\u00A0 - lỗi hay gặp khi copy từ Excel/Word)
+// thành dấu cách thường, và không phân biệt hoa/thường - để tránh báo lỗi oan
+// khi nội dung nhìn giống hệt nhau bằng mắt nhưng khác nhau ở ký tự ẩn.
+function normalizeForMatch(text) {
+  return text
+    .normalize("NFC")
+    .replace(/\u00A0/g, " ")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
+
+// Chuẩn hóa TÊN CỘT tiêu đề Excel (vd: "Option1 " có khoảng trắng thừa,
+// "OPTION1" viết hoa...) về dạng thống nhất để tra cứu cột không bị lệch.
+function normalizeHeaderKey(key) {
+  return String(key)
+    .normalize("NFC")
+    .replace(/\u00A0/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+// Trả về 1 bản sao của row với key đã chuẩn hóa, để tra cứu "option1",
+// "question", "correctanswer" mà không sợ lệch do khoảng trắng/hoa thường
+// trong dòng tiêu đề của file Excel
+function normalizeRowKeys(row) {
+  const normalized = {};
+  Object.keys(row).forEach((key) => {
+    normalized[normalizeHeaderKey(key)] = row[key];
+  });
+  return normalized;
+}
+
 // Với dữ liệu quiz cũ chỉ có field "correctAnswer" (1 chuỗi text), tự động
 // chuyển sang correctAnswerIndexes để tương thích ngược khi mở sửa lại
 function migrateQuestion(q) {
@@ -214,16 +248,19 @@ function QuizManager() {
 
         rows.forEach((row, index) => {
           const rowNum = index + 2; // +2 vì dòng 1 là tiêu đề, Excel đếm từ dòng 1
+          const normalizedRow = normalizeRowKeys(row);
 
-          const questionText = String(row["Question"] || "").trim();
+          const questionText = String(normalizedRow["question"] || "").trim();
 
           const options = [];
           for (let i = 1; i <= MAX_OPTION_COLUMNS; i++) {
-            const val = String(row[`Option${i}`] || "").trim();
+            const val = String(normalizedRow[`option${i}`] || "").trim();
             if (val) options.push(val);
           }
 
-          const correctAnswerRaw = String(row["CorrectAnswer"] || "").trim();
+          const correctAnswerRaw = String(
+            normalizedRow["correctanswer"] || "",
+          ).trim();
 
           // Kiểm tra dữ liệu hợp lệ trước khi thêm - báo rõ dòng nào lỗi để Admin dễ sửa file
           if (
@@ -243,7 +280,11 @@ function QuizManager() {
             .map((s) => s.trim())
             .filter(Boolean);
           const correctAnswerIndexes = correctTexts
-            .map((text) => options.findIndex((opt) => opt === text))
+            .map((text) =>
+              options.findIndex(
+                (opt) => normalizeForMatch(opt) === normalizeForMatch(text),
+              ),
+            )
             .filter((idx) => idx !== -1);
 
           if (
@@ -251,7 +292,7 @@ function QuizManager() {
             correctAnswerIndexes.length !== correctTexts.length
           ) {
             errors.push(
-              `Dòng ${rowNum}: "CorrectAnswer" không khớp với các đáp án đã cho (nhiều đáp án đúng cách nhau bằng dấu ";").`,
+              `Dòng ${rowNum}: CorrectAnswer = "${correctAnswerRaw}" không khớp với các đáp án đã cho (${options.join(" | ")}).`,
             );
             return;
           }
