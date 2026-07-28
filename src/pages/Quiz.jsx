@@ -34,6 +34,19 @@ function pickQuestionsForAttempt(targetQuiz) {
   return targetQuiz.questions;
 }
 
+// Lấy danh sách index các đáp án đúng của 1 câu hỏi.
+// Tương thích ngược: quiz cũ chỉ có "correctAnswer" (1 chuỗi text) vẫn hoạt động bình thường.
+function getCorrectIndexes(question) {
+  if (question.correctAnswerIndexes) return question.correctAnswerIndexes;
+  if (question.correctAnswer) {
+    const idx = question.options.findIndex(
+      (opt) => opt === question.correctAnswer,
+    );
+    return idx >= 0 ? [idx] : [];
+  }
+  return [];
+}
+
 function Quiz() {
   const { currentUser } = useAuth();
   const { levels } = useLevels();
@@ -43,11 +56,9 @@ function Quiz() {
   const [selectedQuizId, setSelectedQuizId] = useState(null);
   const [activeQuestions, setActiveQuestions] = useState([]);
   const [history, setHistory] = useState([]);
-
   const [currentQIndex, setCurrentQIndex] = useState(0);
-  // Lưu đáp án đã chọn cho TỪNG câu theo index, cho phép quay lại đổi đáp án tự do
-  const [selectedAnswers, setSelectedAnswers] = useState({});
-
+  const [selectedIndexes, setSelectedIndexes] = useState([]);
+  const [answered, setAnswered] = useState(false);
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
@@ -68,20 +79,21 @@ function Quiz() {
   const quizzesInLevel = quizzes.filter((q) => q.jlptLevel === selectedLevel);
   const quiz = quizzes.find((q) => q.id === selectedQuizId);
   const currentQuestion = activeQuestions[currentQIndex];
-  const currentSelected = selectedAnswers[currentQIndex]; // undefined nếu câu này chưa chọn
 
   const startQuiz = (quizId) => {
     const target = quizzes.find((q) => q.id === quizId);
 
     clearInterval(intervalRef.current);
 
+    // Mỗi lần bắt đầu bài, random lại bộ câu hỏi nếu quiz là ngân hàng câu hỏi
     const pickedQuestions = pickQuestionsForAttempt(target);
 
     setSelectedQuizId(quizId);
     setActiveQuestions(pickedQuestions);
     setTimeLeft(target.timeLimit);
     setCurrentQIndex(0);
-    setSelectedAnswers({});
+    setSelectedIndexes([]);
+    setAnswered(false);
     setScore(0);
     setAnswers([]);
     setIsFinished(false);
@@ -94,7 +106,7 @@ function Quiz() {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(intervalRef.current);
-          setIsFinished(true); // Hết giờ -> tự nộp bài với các câu đã chọn tới lúc đó
+          setIsFinished(true);
           return 0;
         }
         return prev - 1;
@@ -103,78 +115,111 @@ function Quiz() {
     return () => clearInterval(intervalRef.current);
   }, [isFinished, quiz]);
 
-  // Chấm điểm + tổng hợp toàn bộ câu trả lời CHỈ khi bài thi kết thúc (nộp bài hoặc hết giờ)
-  // Tính trực tiếp từ selectedAnswers tại đúng thời điểm này, tránh việc đọc state cũ (stale closure)
   useEffect(() => {
     if (isFinished && currentUser && quiz) {
-      let finalScore = 0;
-      const finalAnswers = activeQuestions.map((q, idx) => {
-        const sel = selectedAnswers[idx] ?? null;
-        const isCorrect = sel === q.correctAnswer;
-        if (isCorrect) finalScore += 1;
-        return {
-          questionIndex: idx,
-          question: q.question,
-          options: q.options,
-          selectedAnswer: sel,
-          correctAnswer: q.correctAnswer,
-          isCorrect,
-        };
-      });
-
-      setScore(finalScore);
-      setAnswers(finalAnswers);
       setIsSaving(true);
-
       const timeSpent = quiz.timeLimit - timeLeft;
       saveQuizResult(
         currentUser.uid,
         quiz.id,
-        finalScore,
+        score,
         activeQuestions.length,
         timeSpent,
-        finalAnswers,
+        answers,
       )
         .then(async () => {
           const data = await getQuizHistory(currentUser.uid, quiz.id);
+
           setHistory(data);
+
           setIsSaving(false);
         })
         .catch(() => setIsSaving(false));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFinished]);
 
-  // Chỉ đánh dấu đáp án đang chọn - KHÔNG chấm đúng/sai, KHÔNG tự chuyển câu
-  const handleSelectOption = (option) => {
-    setSelectedAnswers((prev) => ({ ...prev, [currentQIndex]: option }));
+  // Danh sách index đáp án đúng của câu hiện tại + có phải câu nhiều đáp án không
+  const correctIndexes = currentQuestion
+    ? getCorrectIndexes(currentQuestion)
+    : [];
+  const isMultiAnswer = correctIndexes.length > 1;
+
+  // Chốt đáp án đã chọn, chấm điểm và chuyển câu tiếp theo
+  const finalizeAnswer = (chosenIndexes) => {
+    setAnswered(true);
+    setSelectedIndexes(chosenIndexes);
+
+    const sortedChosen = [...chosenIndexes].sort((a, b) => a - b);
+    const sortedCorrect = [...correctIndexes].sort((a, b) => a - b);
+    const isCorrect =
+      sortedChosen.length === sortedCorrect.length &&
+      sortedChosen.every((v, i) => v === sortedCorrect[i]);
+
+    setAnswers((prev) => [
+      ...prev,
+      {
+        questionIndex: currentQIndex,
+        question: currentQuestion.question,
+        options: currentQuestion.options,
+        selectedAnswer: chosenIndexes
+          .map((i) => currentQuestion.options[i])
+          .join(", "),
+        correctAnswer: correctIndexes
+          .map((i) => currentQuestion.options[i])
+          .join(", "),
+        isCorrect,
+      },
+    ]);
+
+    if (isCorrect) {
+      setScore((prev) => prev + 1);
+    }
+
+    setTimeout(() => {
+      if (currentQIndex + 1 < activeQuestions.length) {
+        setCurrentQIndex((prev) => prev + 1);
+        setSelectedIndexes([]);
+        setAnswered(false);
+      } else {
+        clearInterval(intervalRef.current);
+        setIsFinished(true);
+      }
+    }, 1000);
   };
 
-  const goToPrevQuestion = () => {
-    if (currentQIndex > 0) {
-      setCurrentQIndex((prev) => prev - 1);
+  // Bấm vào 1 đáp án: câu 1-đáp-án thì chốt luôn (như cũ),
+  // câu nhiều-đáp-án thì chỉ tick chọn, chờ bấm "Xác nhận đáp án"
+  const handleToggleOption = (optIndex) => {
+    if (answered) return;
+
+    if (!isMultiAnswer) {
+      finalizeAnswer([optIndex]);
+      return;
     }
+
+    setSelectedIndexes((prev) =>
+      prev.includes(optIndex)
+        ? prev.filter((i) => i !== optIndex)
+        : [...prev, optIndex],
+    );
   };
 
-  const goToNextQuestion = () => {
-    if (currentQIndex + 1 < activeQuestions.length) {
-      setCurrentQIndex((prev) => prev + 1);
-    } else {
-      // Đang ở câu cuối -> nộp bài
-      clearInterval(intervalRef.current);
-      setIsFinished(true);
-    }
+  const handleConfirmMultiAnswer = () => {
+    if (selectedIndexes.length === 0) return;
+    finalizeAnswer(selectedIndexes);
   };
 
-  const isLastQuestion = currentQIndex === activeQuestions.length - 1;
-  const answeredCount = Object.keys(selectedAnswers).length;
-
-  // Chỉ tô đen ô đang được CHỌN, không tiết lộ đúng/sai trong lúc làm bài
-  const getOptionStyle = (option) => {
-    if (currentSelected === option) {
-      return "bg-black border-2 border-black text-white";
+  const getOptionStyle = (optIndex) => {
+    if (!answered) {
+      return selectedIndexes.includes(optIndex)
+        ? "bg-blue-100 border-2 border-black"
+        : "bg-white border-2 border-black hover:bg-stone-100";
     }
-    return "bg-white border-2 border-black hover:bg-stone-100";
+    if (correctIndexes.includes(optIndex))
+      return "bg-green-700 border-2 border-black text-white";
+    if (selectedIndexes.includes(optIndex))
+      return "bg-red-600 border-2 border-black text-white";
+    return "bg-stone-200 border-2 border-black opacity-50";
   };
 
   if (loading) {
@@ -193,12 +238,12 @@ function Quiz() {
           Chọn bài trắc nghiệm
         </h1>
 
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
+        <div className="flex gap-2 mb-6">
           {levels.map((level) => (
             <button
               key={level}
               onClick={() => setSelectedLevel(level)}
-              className={`flex-shrink-0 px-4 py-2 rounded-lg font-bold border-2 border-black transition-colors ${
+              className={`px-4 py-2 rounded-lg font-bold border-2 border-black transition-colors ${
                 selectedLevel === level
                   ? "bg-black text-white"
                   : "bg-[#f5e6a8] text-stone-800 hover:bg-[#f0dd8a]"
@@ -214,7 +259,7 @@ function Quiz() {
             Chưa có quiz nào cho cấp độ {selectedLevel}.
           </p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             {quizzesInLevel.map((q) => (
               <button
                 key={q.id}
@@ -267,47 +312,6 @@ function Quiz() {
           </div>
         </div>
 
-        {/* Xem lại chi tiết đáp án bài vừa làm - vì giờ không hiện lúc làm bài nữa,
-            phần này là nơi duy nhất để biết đúng/sai từng câu */}
-        {!isSaving && answers.length > 0 && (
-          <div className="max-w-lg mx-auto mt-6">
-            <h2 className="font-bold text-lg mb-3">Chi tiết bài vừa làm</h2>
-            <div className="space-y-3">
-              {answers.map((answer, i) => (
-                <div
-                  key={i}
-                  className={`border-2 rounded-lg p-3 bg-white ${
-                    answer.isCorrect ? "border-green-600" : "border-red-500"
-                  }`}
-                >
-                  <p className="font-semibold mb-2">Câu {i + 1}</p>
-                  <p className="mb-2">{answer.question}</p>
-                  <p>
-                    <span className="font-medium">Bạn chọn:</span>{" "}
-                    <span
-                      className={
-                        answer.isCorrect
-                          ? "text-green-700 font-bold"
-                          : "text-red-600 font-bold"
-                      }
-                    >
-                      {answer.selectedAnswer || "(chưa chọn)"}
-                    </span>
-                  </p>
-                  {!answer.isCorrect && (
-                    <p>
-                      <span className="font-medium">Đáp án đúng:</span>{" "}
-                      <span className="text-green-700 font-bold">
-                        {answer.correctAnswer}
-                      </span>
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         <div className="w-full mt-6 border-t pt-5">
           <h2 className="font-bold text-lg mb-3">Lịch sử làm bài</h2>
 
@@ -320,6 +324,7 @@ function Quiz() {
                   key={item.id}
                   className="border rounded-lg bg-white overflow-hidden"
                 >
+                  {/* Header */}
                   <button
                     onClick={() =>
                       setExpandedHistory(
@@ -330,18 +335,22 @@ function Quiz() {
                   >
                     <div className="text-left">
                       <p className="font-bold">Lần {history.length - index}</p>
+
                       <p className="text-xs text-stone-500">
                         {new Date(item.completedAt).toLocaleString("vi-VN")}
                       </p>
                     </div>
+
                     <div className="text-right">
                       <p className="font-bold">
                         {item.score}/{item.totalQuestions}
                       </p>
+
                       <p className="text-xs">{item.timeSpent}s</p>
                     </div>
                   </button>
 
+                  {/* Chi tiết */}
                   {expandedHistory === item.id && (
                     <div className="border-t bg-stone-50 p-4">
                       {!item.answers || item.answers.length === 0 ? (
@@ -356,7 +365,9 @@ function Quiz() {
                               className="border rounded-lg p-3 bg-white"
                             >
                               <p className="font-semibold mb-2">Câu {i + 1}</p>
+
                               <p className="mb-2">{answer.question}</p>
+
                               <p>
                                 <span className="font-medium">Bạn chọn:</span>{" "}
                                 <span
@@ -366,9 +377,10 @@ function Quiz() {
                                       : "text-red-600 font-bold"
                                   }
                                 >
-                                  {answer.selectedAnswer || "(chưa chọn)"}
+                                  {answer.selectedAnswer}
                                 </span>
                               </p>
+
                               {!answer.isCorrect && (
                                 <p>
                                   <span className="font-medium">
@@ -393,18 +405,13 @@ function Quiz() {
       </Layout>
     );
   }
-  console.log("Question:", currentQuestion.question);
-  console.log("Options:", currentQuestion.options);
-  console.log("Length:", currentQuestion.options.length);
+
   return (
     <Layout>
       <div className="max-w-lg mx-auto">
         <div className="flex justify-between items-center mb-4">
           <span className="inline-block bg-black text-white text-xs font-bold px-3 py-1 rounded-full">
             Câu {currentQIndex + 1} / {activeQuestions.length}
-          </span>
-          <span className="text-xs font-bold text-stone-600">
-            Đã trả lời: {answeredCount}/{activeQuestions.length}
           </span>
           <span
             className={`text-sm font-bold px-3 py-1 rounded-full border-2 border-black ${
@@ -423,41 +430,43 @@ function Quiz() {
           </h2>
         </div>
 
-        <div className="flex flex-col gap-3 mb-5">
-          {currentQuestion.options.map((option, index) => (
+        {isMultiAnswer && (
+          <p className="text-xs text-stone-500 text-center mb-2">
+            Câu này có thể có nhiều đáp án đúng — chọn xong bấm "Xác nhận đáp
+            án".
+          </p>
+        )}
+
+        <div className="flex flex-col gap-3">
+          {currentQuestion.options.map((option, optIndex) => (
             <button
-              key={`${currentQIndex}-${index}`}
-              onClick={() => handleSelectOption(option)}
-              className={`p-3 rounded-lg font-medium transition-colors ${getOptionStyle(option)}`}
+              key={optIndex}
+              onClick={() => handleToggleOption(optIndex)}
+              disabled={answered}
+              className={`p-3 rounded-lg font-medium text-stone-800 transition-colors flex items-center gap-3 ${getOptionStyle(optIndex)}`}
             >
-              {option}
+              {isMultiAnswer && (
+                <span
+                  className={`w-4 h-4 flex-shrink-0 border-2 border-current rounded ${
+                    selectedIndexes.includes(optIndex)
+                      ? "bg-current"
+                      : "bg-transparent"
+                  }`}
+                />
+              )}
+              <span>{option}</span>
             </button>
           ))}
         </div>
 
-        {/* Điều hướng bằng mũi tên - hoàn toàn tự chọn, không tự động chuyển câu */}
-        <div className="flex items-center justify-between gap-3">
+        {isMultiAnswer && !answered && (
           <button
-            onClick={goToPrevQuestion}
-            disabled={currentQIndex === 0}
-            className="flex items-center gap-1 px-4 py-2 rounded-lg border-2 border-black bg-white font-bold hover:bg-stone-100 disabled:opacity-30 disabled:cursor-not-allowed"
+            onClick={handleConfirmMultiAnswer}
+            disabled={selectedIndexes.length === 0}
+            className="w-full mt-4 p-3 rounded-lg font-bold bg-black text-white hover:bg-stone-800 disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            ← Trước
+            Xác nhận đáp án
           </button>
-
-          <button
-            onClick={goToNextQuestion}
-            disabled={currentSelected === undefined}
-            className="flex items-center gap-1 px-4 py-2 rounded-lg border-2 border-black bg-black text-white font-bold hover:bg-stone-800 disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            {isLastQuestion ? "Nộp bài ✓" : "Tiếp →"}
-          </button>
-        </div>
-
-        {currentSelected === undefined && (
-          <p className="text-center text-xs text-stone-500 mt-2">
-            Chọn 1 đáp án để tiếp tục
-          </p>
         )}
       </div>
     </Layout>

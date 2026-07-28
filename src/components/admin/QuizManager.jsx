@@ -13,8 +13,19 @@ const EMPTY_QUESTION = () => ({
   id: `q${Date.now()}`,
   question: "",
   options: ["", "", "", ""],
-  correctAnswer: "",
+  correctAnswerIndexes: [], // mảng vị trí (index) các đáp án đúng - hỗ trợ chọn nhiều
 });
+
+// Với dữ liệu quiz cũ chỉ có field "correctAnswer" (1 chuỗi text), tự động
+// chuyển sang correctAnswerIndexes để tương thích ngược khi mở sửa lại
+function migrateQuestion(q) {
+  if (q.correctAnswerIndexes) return q;
+  const idx = (q.options || []).findIndex((opt) => opt === q.correctAnswer);
+  return {
+    ...q,
+    correctAnswerIndexes: idx >= 0 ? [idx] : [],
+  };
+}
 
 function QuizManager() {
   // editingQuizId = null nghĩa là đang tạo quiz MỚI
@@ -76,7 +87,9 @@ function QuizManager() {
     setJlptLevel(q.jlptLevel || "N5");
     setTimeLimit(q.timeLimit || 60);
     setQuestions(
-      q.questions && q.questions.length > 0 ? q.questions : [EMPTY_QUESTION()],
+      q.questions && q.questions.length > 0
+        ? q.questions.map(migrateQuestion)
+        : [EMPTY_QUESTION()],
     );
     setIsRandomPool(!!q.isRandomPool);
     setQuestionsPerAttempt(q.questionsPerAttempt || 60);
@@ -109,6 +122,15 @@ function QuizManager() {
     const updated = [...questions];
     updated[index] = { ...updated[index], [field]: value };
     setQuestions(updated);
+  };
+
+  // Tick/bỏ tick 1 đáp án đúng - cho phép chọn nhiều đáp án cho cùng 1 câu
+  const toggleCorrectAnswer = (qIndex, optIndex) => {
+    const current = questions[qIndex].correctAnswerIndexes || [];
+    const updated = current.includes(optIndex)
+      ? current.filter((i) => i !== optIndex)
+      : [...current, optIndex];
+    updateQuestion(qIndex, "correctAnswerIndexes", updated);
   };
 
   const updateOption = (qIndex, optIndex, value) => {
@@ -160,7 +182,7 @@ function QuizManager() {
           const option2 = String(row["Option2"] || "").trim();
           const option3 = String(row["Option3"] || "").trim();
           const option4 = String(row["Option4"] || "").trim();
-          const correctAnswer = String(row["CorrectAnswer"] || "").trim();
+          const correctAnswerRaw = String(row["CorrectAnswer"] || "").trim();
 
           // Kiểm tra dữ liệu hợp lệ trước khi thêm - báo rõ dòng nào lỗi để Admin dễ sửa file
           if (
@@ -169,16 +191,29 @@ function QuizManager() {
             !option2 ||
             !option3 ||
             !option4 ||
-            !correctAnswer
+            !correctAnswerRaw
           ) {
             errors.push(`Dòng ${rowNum}: thiếu dữ liệu (cần đủ 6 cột).`);
             return;
           }
 
           const options = [option1, option2, option3, option4];
-          if (!options.includes(correctAnswer)) {
+
+          // Cho phép nhiều đáp án đúng, cách nhau bằng dấu ";" (vd: "Đáp án A;Đáp án C")
+          const correctTexts = correctAnswerRaw
+            .split(";")
+            .map((s) => s.trim())
+            .filter(Boolean);
+          const correctAnswerIndexes = correctTexts
+            .map((text) => options.findIndex((opt) => opt === text))
+            .filter((idx) => idx !== -1);
+
+          if (
+            correctAnswerIndexes.length === 0 ||
+            correctAnswerIndexes.length !== correctTexts.length
+          ) {
             errors.push(
-              `Dòng ${rowNum}: "CorrectAnswer" không khớp với 4 đáp án đã cho.`,
+              `Dòng ${rowNum}: "CorrectAnswer" không khớp với 4 đáp án đã cho (nhiều đáp án đúng cách nhau bằng dấu ";").`,
             );
             return;
           }
@@ -187,7 +222,7 @@ function QuizManager() {
             id: `imp${Date.now()}_${importedQuestions.length}`,
             question: questionText,
             options,
-            correctAnswer,
+            correctAnswerIndexes,
           });
         });
 
@@ -241,6 +276,17 @@ function QuizManager() {
     if (isRandomPool && Number(questionsPerAttempt) > questions.length) {
       setMessage(
         `Lỗi: số câu random mỗi lần thi (${questionsPerAttempt}) lớn hơn tổng số câu hiện có (${questions.length}).`,
+      );
+      return;
+    }
+
+    // Mỗi câu hỏi phải có ít nhất 1 đáp án đúng được tick chọn
+    const missingAnswerIndex = questions.findIndex(
+      (q) => !q.correctAnswerIndexes || q.correctAnswerIndexes.length === 0,
+    );
+    if (missingAnswerIndex !== -1) {
+      setMessage(
+        `Lỗi: Câu ${missingAnswerIndex + 1} chưa được tick đáp án đúng nào.`,
       );
       return;
     }
@@ -352,6 +398,8 @@ function QuizManager() {
         <p className="text-xs text-stone-600 mb-2">
           File cần đúng 6 cột theo thứ tự:{" "}
           <b>Question, Option1, Option2, Option3, Option4, CorrectAnswer</b>.
+          Nếu câu có nhiều đáp án đúng, ghi cách nhau bằng dấu <b>;</b> trong
+          cột CorrectAnswer (vd: <b>Đáp án A;Đáp án C</b>).
           {editingQuizId
             ? " Đang sửa quiz có sẵn nên import sẽ NỐI THÊM vào ngân hàng câu hỏi hiện có."
             : " Import sẽ THAY THẾ toàn bộ danh sách câu hỏi hiện tại bên dưới."}
@@ -499,30 +547,40 @@ function QuizManager() {
                     required
                   />
 
-                  {q.options.map((opt, optIndex) => (
-                    <input
-                      key={optIndex}
-                      type="text"
-                      placeholder={`Đáp án ${optIndex + 1}`}
-                      value={opt}
-                      onChange={(e) =>
-                        updateOption(qIndex, optIndex, e.target.value)
-                      }
-                      className="p-2 rounded border-2 border-black"
-                      required
-                    />
-                  ))}
+                  <p className="text-xs text-stone-500 -mb-1">
+                    Tick chọn 1 hoặc nhiều đáp án đúng
+                  </p>
 
-                  <input
-                    type="text"
-                    placeholder="Đáp án đúng"
-                    value={q.correctAnswer}
-                    onChange={(e) =>
-                      updateQuestion(qIndex, "correctAnswer", e.target.value)
-                    }
-                    className="p-2 rounded border-2 border-black"
-                    required
-                  />
+                  {q.options.map((opt, optIndex) => {
+                    const isChecked = (q.correctAnswerIndexes || []).includes(
+                      optIndex,
+                    );
+                    return (
+                      <div key={optIndex} className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleCorrectAnswer(qIndex, optIndex)}
+                          title="Đánh dấu đây là đáp án đúng"
+                          className="w-5 h-5 flex-shrink-0 accent-green-700"
+                        />
+                        <input
+                          type="text"
+                          placeholder={`Đáp án ${optIndex + 1}`}
+                          value={opt}
+                          onChange={(e) =>
+                            updateOption(qIndex, optIndex, e.target.value)
+                          }
+                          className={`flex-1 p-2 rounded border-2 ${
+                            isChecked
+                              ? "border-green-700 bg-green-50"
+                              : "border-black"
+                          }`}
+                          required
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               );
             })}
