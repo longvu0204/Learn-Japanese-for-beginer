@@ -184,7 +184,7 @@ function Quiz() {
         clearInterval(intervalRef.current);
         setIsFinished(true);
       }
-    }, 1000);
+    }, 5000);
   };
 
   // Bấm vào 1 đáp án: câu 1-đáp-án thì chốt luôn (như cũ),
